@@ -2,20 +2,36 @@ mod error;
 mod program;
 mod shader;
 mod util;
+mod vertex;
+mod buffer;
 
 use crate::program::Program;
 use crate::shader::Shader;
+use crate::vertex::Vertex;
+use crate::buffer::{ArrayBuffer, VertexArray};
 
-use gl::types::{GLchar, GLuint};
+use gl::types::*;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
 use std::ffi::CString;
 use std::time::Duration;
 
-const VERTICES: [f32; 9] = [-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0];
+use nalgebra::Vector3;
+
+const VERTICES: [f32; 54] = [
+    // positions      // colors
+    -0.5, -0.5, -0.5, 0.0, 0.0, 1.0, -0.5, 0.5, -0.5, 0.0, 0.0, 1.0, 0.5, 0.5, -0.5, 0.0, 0.0, 1.0,
+    0.5, 0.5, 0.5, 0.0, 0.0, 1.0, 0.5, -0.5, 0.5, 0.0, 0.0, 1.0, -0.5, -0.5, 0.5, 0.0, 0.0, 1.0,
+    -0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 0.5, -0.5, -0.5, 0.0, 0.0, 1.0,
+];
 
 pub fn main() {
+    let vertices: [Vertex<f32>; 3] = [
+        Vertex::new(-0.5, -0.5, -0.5, 0.0, 0.0, 1.0),
+        Vertex::new(-0.5, 0.5, -0.5, 0.0, 0.0, 1.0),
+        Vertex::new(0.5, 0.5, -0.5, 0.0, 0.0, 1.0),
+    ];
+
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
 
@@ -48,55 +64,29 @@ pub fn main() {
 
     let program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
-    let mut vbo: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenBuffers(1, &mut vbo);
-    }
+    let vbo = ArrayBuffer::new();
+    vbo.bind();
+    vbo.static_draw_data(&vertices);
+    ArrayBuffer::unbind();
 
-    unsafe {
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,                                                       // target
-            (VERTICES.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, // size of data in bytes
-            VERTICES.as_ptr() as *const gl::types::GLvoid, // pointer to data
-            gl::STATIC_DRAW,                               // usage
-        );
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0); // unbind the buffer
-    }
+    let vao = VertexArray::new();
+    vao.bind();
 
-    let mut vao: gl::types::GLuint = 0;
-    unsafe {
-        gl::GenVertexArrays(1, &mut vao);
-    }
-
-    unsafe {
-        gl::BindVertexArray(vao);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-
-        gl::EnableVertexAttribArray(0); // this is "layout (location = 0)" in vertex shader
-        gl::VertexAttribPointer(
-            0,         // index of the generic vertex attribute ("layout (location = 0)")
-            3,         // the number of components per generic vertex attribute
-            gl::FLOAT, // data type
-            gl::FALSE, // normalized (int-to-float conversion)
-            (3 * std::mem::size_of::<f32>()) as gl::types::GLint, // stride (byte offset between consecutive attributes)
-            std::ptr::null(),                                     // offset of the first component
-        );
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-        gl::BindVertexArray(0);
-    }
+    vbo.bind();
+    Vertex::<f32>::attrib_pointer();
+    ArrayBuffer::unbind();
+    VertexArray::unbind();
 
     program.use_program();
+    vao.bind();
     unsafe {
-        gl::BindVertexArray(vao);
         gl::DrawArrays(
-            gl::TRIANGLES, // mode
-            0,             // starting index in the enabled arrays
-            3,             // number of indices to be rendered
+            gl::TRIANGLES,             // mode
+            0,                         // starting index in the enabled arrays
+            vertices.len() as GLsizei, // number of indices to be rendered
         );
     }
+    VertexArray::unbind();
 
     let mut event_pump = sdl.event_pump().unwrap();
     let mut i = 0.0;
@@ -108,14 +98,13 @@ pub fn main() {
             gl::ClearColor(0.3, i, i, i);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
-            unsafe {
-                gl::BindVertexArray(vao);
-                gl::DrawArrays(
-                    gl::TRIANGLES, // mode
-                    0,             // starting index in the enabled arrays
-                    3,             // number of indices to be rendered
-                );
-            }
+            vao.bind();
+            gl::DrawArrays(
+                gl::TRIANGLES,                   // mode
+                0,                               // starting index in the enabled arrays
+                (vertices.len() * 3) as GLsizei, // number of indices to be rendered
+            );
+            VertexArray::unbind();
         }
 
         for event in event_pump.poll_iter() {
@@ -133,4 +122,6 @@ pub fn main() {
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
+
+    drop(gl);
 }

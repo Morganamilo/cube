@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 sdl2 = "0.32.2"
 gl = "0.13.0"
+nalgebra = "0.18.0"
