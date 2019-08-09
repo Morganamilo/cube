@@ -19,31 +19,27 @@ use std::path::Path;
 use std::time::Duration;
 
 pub fn main() {
-    let vertices: [Vertex<f32>; 4] = [
-        Vertex::new(-0.5, -0.5, -0.5, 0.0, 0.0, 1.0),
-        Vertex::new(-0.5, 0.5, -0.5, 0.0, 0.0, 1.0),
-        Vertex::new(0.5, 0.5, -0.5, 0.0, 0.0, 1.0),
-        Vertex::new(0.5, -0.5, -0.5, 0.0, 0.0, 1.0),
+    let mut vertices: [Vertex<f32>; 3] = [
+        Vertex::new(-1.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+        Vertex::new(0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+        Vertex::new(-1.0, 1.0, 0.0, 0.0, 0.0, 1.0),
     ];
 
-    let indices: [u32; 6] = [0, 1, 2, 1, 2, 3];
+    let indices: [u32; 3] = [0, 1, 2];
 
-    let mut verticies = Vec::new();
+    let mut vertices = Vec::new();
     let mut indices = Vec::new();
 
     //let (models, materials) = tobj::load_obj(&Path::new("assets/obj/chalet.obj")).unwrap();
     let (models, materials) = tobj::load_obj(&Path::new("assets/obj/cube.obj")).unwrap();
 
+    let mut color = 0;
+    let mut i = 0;
     for model in models {
         let mesh = model.mesh;
         indices.extend(mesh.indices);
-        for v in mesh.positions.chunks(3) {
-            verticies.push(Vertex::new(v[0], v[1], v[2], 0.0, 0.0, 1.0));
-        }
+        vertices.extend(mesh.positions);
     }
-
-    println!("{:#?}", vertices);
-    println!("{:?}", indices);
 
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
@@ -92,15 +88,20 @@ pub fn main() {
     let matrix_id =
         unsafe { gl::GetUniformLocation(program.id(), CString::new("MVP").unwrap().as_ptr()) };
     // Projection matrix : 45° Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
-    let projection = Matrix4::new_perspective(f32::to_radians(45.0), 4.0 / 3.0, 0.1, 100.0);
-    let view = Matrix4::face_towards(
-        &Point3::new(4.0, 3.0, 3.0),
+    let projection = Matrix4::new_perspective(4.0 / 3.0, f32::to_radians(45.0), 0.1, 100.0);
+    let view = Matrix4::look_at_rh(
+        &Point3::new(3.0, 3.0, 4.0),
         &Point3::new(0.0, 0.0, 0.0),
         &Vector3::new(0.0, 1.0, 0.0),
     );
 
-    let model = Matrix4::repeat(1.0);
+    let model = Matrix4::identity();
     let mvp = projection * view * model;
+
+    println!("projection {:#?}", projection);
+    println!("view {:#?}", view);
+    println!("model {:#?}", model);
+    println!("mvp {:#?}", mvp);
 
     let vao = VertexArray::new();
     vao.bind();

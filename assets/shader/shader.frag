@@ -1,14 +1,10 @@
 #version 320 es
 
-precision mediump float;
-
-in VS_OUTPUT {
-    vec3 Color;
-} IN;
+precision highp float;
 
 out vec4 Color;
 
 void main()
 {
-    Color = vec4(IN.Color, 1.0f);
+    Color = vec4(0.0f, 0.3f, 0.0f, 1.0f);
 }
