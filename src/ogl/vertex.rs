@@ -1,6 +1,7 @@
 use gl::types::*;
 use nalgebra::{Scalar, Vector3};
 
+#[derive(Debug)]
 pub struct Vertex<T: Scalar> {
     pub pos: Vector3<T>,
     pub col: Vector3<T>,
@@ -22,7 +23,7 @@ impl<T: Scalar> Vertex<T> {
                 3,         // the number of components per generic vertex attribute
                 gl::FLOAT, // data type
                 gl::FALSE, // normalized (int-to-float conversion)
-                std::mem::size_of::<Vector3<T>>() as GLint, // stride (byte offset between consecutive attributes)
+                std::mem::size_of::<Vertex<T>>() as GLint, // stride (byte offset between consecutive attributes)
                 std::ptr::null(),                          // offset of the first component
             );
 
