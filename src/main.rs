@@ -1,28 +1,30 @@
-mod ogl;
 mod error;
+mod ogl;
 mod util;
 
-
-use crate::ogl::buffer::{ArrayBuffer, VertexArray};
+use crate::ogl::buffer::{ArrayBuffer, ElementArrayBuffer, VertexArray};
+use crate::ogl::color_buffer::ColorBuffer;
 use crate::ogl::program::Program;
 use crate::ogl::shader::Shader;
 use crate::ogl::vertex::Vertex;
 use crate::ogl::viewport::Viewport;
-use crate::ogl::color_buffer::ColorBuffer;
 
 use gl::types::*;
+use nalgebra::Vector3;
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use std::ffi::CString;
 use std::time::Duration;
-use nalgebra::Vector3;
 
 pub fn main() {
-    let vertices: [Vertex<f32>; 3] = [
+    let vertices: [Vertex<f32>; 4] = [
         Vertex::new(-0.5, -0.5, -0.5, 0.0, 0.0, 1.0),
         Vertex::new(-0.5, 0.5, -0.5, 0.0, 0.0, 1.0),
         Vertex::new(0.5, 0.5, -0.5, 0.0, 0.0, 1.0),
+        Vertex::new(0.5, -0.5, -0.5, 0.0, 0.0, 1.0),
     ];
+
+    let indicies: [u32; 6] = [0, 1, 2, 1, 2, 3];
 
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
@@ -52,36 +54,30 @@ pub fn main() {
     color_buffer.clear();
 
     let vert_shader =
-        Shader::vert_from_cstr(&CString::new(include_str!("triangle.vert")).unwrap()).unwrap();
+        Shader::vert_from_cstr(&CString::new(include_str!("../assets/shader/triangle.vert")).unwrap()).unwrap();
 
     let frag_shader =
-        Shader::frag_from_cstr(&CString::new(include_str!("triangle.frag")).unwrap()).unwrap();
+        Shader::frag_from_cstr(&CString::new(include_str!("../assets/shader/triangle.frag")).unwrap()).unwrap();
 
     let program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
-
-    let vbo = ArrayBuffer::new();
-    vbo.bind();
-    vbo.static_draw_data(&vertices);
-    ArrayBuffer::unbind();
 
     let vao = VertexArray::new();
     vao.bind();
 
+    let element_buffer = ElementArrayBuffer::new();
+    element_buffer.bind();
+    element_buffer.static_draw_data(&indicies);
+    ElementArrayBuffer::unbind();
+
+
+    let vbo = ArrayBuffer::new();
     vbo.bind();
+    vbo.static_draw_data(&vertices);
     Vertex::<f32>::attrib_pointer();
     ArrayBuffer::unbind();
     VertexArray::unbind();
 
     program.use_program();
-    vao.bind();
-    unsafe {
-        gl::DrawArrays(
-            gl::TRIANGLES,             // mode
-            0,                         // starting index in the enabled arrays
-            vertices.len() as GLsizei, // number of indices to be rendered
-        );
-    }
-    VertexArray::unbind();
 
     let mut event_pump = sdl.event_pump().unwrap();
     let mut i = 0.0;
@@ -106,19 +102,23 @@ pub fn main() {
 
         i = (i + 0.005) % 1.0;
 
-        unsafe {
-            color_buffer.set_color(Vector3::new(i, i, i));
-            color_buffer.use_color_buffer();
-            color_buffer.clear();
+        color_buffer.set_color(Vector3::new(i, i, i));
+        color_buffer.use_color_buffer();
+        color_buffer.clear();
 
-            vao.bind();
-            gl::DrawArrays(
-                gl::TRIANGLES,                   // mode
-                0,                               // starting index in the enabled arrays
-                (vertices.len() * 3) as GLsizei, // number of indices to be rendered
+        vao.bind();
+        element_buffer.bind();
+        unsafe {
+            gl::DrawElements(
+                gl::TRIANGLES,             // mode
+                indicies.len() as GLsizei, // number of indices to be rendered
+                gl::UNSIGNED_INT,
+                0 as *const GLvoid, // starting index in the enabled arrays
             );
-            VertexArray::unbind();
         }
+
+        ElementArrayBuffer::unbind();
+        VertexArray::unbind();
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));

@@ -1,4 +1,4 @@
-use nalgebra::{Vector4, Vector3, U4, U1};
+use nalgebra::{Vector3, Vector4, U1, U4};
 
 pub struct ColorBuffer {
     pub color: Vector4<f32>,
