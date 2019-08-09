@@ -1,29 +1,25 @@
+mod buffer;
 mod error;
 mod program;
 mod shader;
 mod util;
 mod vertex;
-mod buffer;
+mod viewport;
+mod color_buffer;
 
+use crate::buffer::{ArrayBuffer, VertexArray};
 use crate::program::Program;
 use crate::shader::Shader;
 use crate::vertex::Vertex;
-use crate::buffer::{ArrayBuffer, VertexArray};
+use crate::viewport::Viewport;
+use crate::color_buffer::ColorBuffer;
 
 use gl::types::*;
-use sdl2::event::Event;
+use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use std::ffi::CString;
 use std::time::Duration;
-
 use nalgebra::Vector3;
-
-const VERTICES: [f32; 54] = [
-    // positions      // colors
-    -0.5, -0.5, -0.5, 0.0, 0.0, 1.0, -0.5, 0.5, -0.5, 0.0, 0.0, 1.0, 0.5, 0.5, -0.5, 0.0, 0.0, 1.0,
-    0.5, 0.5, 0.5, 0.0, 0.0, 1.0, 0.5, -0.5, 0.5, 0.0, 0.0, 1.0, -0.5, -0.5, 0.5, 0.0, 0.0, 1.0,
-    -0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 0.5, -0.5, -0.5, 0.0, 0.0, 1.0,
-];
 
 pub fn main() {
     let vertices: [Vertex<f32>; 3] = [
@@ -38,6 +34,7 @@ pub fn main() {
     let window = video
         .window("rust-sdl2 demo", 800, 600)
         .position_centered()
+        .resizable()
         .opengl()
         .build()
         .unwrap();
@@ -49,12 +46,14 @@ pub fn main() {
 
     let gl = gl::load_with(|s| video.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
-    unsafe {
-        gl::Viewport(0, 0, 900, 700); // set viewport
-        gl::ClearColor(0.3, 0.3, 0.5, 1.0);
-    }
-
     let mut canvas = window.into_canvas().build().unwrap();
+
+    let mut viewport = Viewport::for_window(900, 700);
+    viewport.use_viewport();
+
+    let mut color_buffer = ColorBuffer::from_color(Vector3::new(1.0, 1.0, 1.0));
+    color_buffer.use_color_buffer();
+    color_buffer.clear();
 
     let vert_shader =
         Shader::vert_from_cstr(&CString::new(include_str!("triangle.vert")).unwrap()).unwrap();
@@ -91,12 +90,30 @@ pub fn main() {
     let mut event_pump = sdl.event_pump().unwrap();
     let mut i = 0.0;
     'running: loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Window {
+                    win_event: WindowEvent::Resized(w, h),
+                    ..
+                } => {
+                    viewport.set_size(w, h);
+                    viewport.use_viewport();
+                }
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => break 'running,
+                _ => {}
+            }
+        }
+
         i = (i + 0.005) % 1.0;
-        println!("{}", i);
 
         unsafe {
-            gl::ClearColor(0.3, i, i, i);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            color_buffer.set_color(Vector3::new(i, i, i));
+            color_buffer.use_color_buffer();
+            color_buffer.clear();
 
             vao.bind();
             gl::DrawArrays(
@@ -106,18 +123,6 @@ pub fn main() {
             );
             VertexArray::unbind();
         }
-
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
-                _ => {}
-            }
-        }
-        // The rest of the game loop goes here...
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));

@@ -1,42 +1,60 @@
 use gl::types::*;
+use std::marker::PhantomData;
 
-pub struct ArrayBuffer(GLuint);
+pub type ArrayBuffer = Buffer<Array>;
+pub type ElementArrayBuffer = Buffer<ElementArray>;
 
-impl ArrayBuffer {
-    pub fn new() -> ArrayBuffer {
+pub unsafe trait BufferType {
+    const BUFFER_TYPE: GLuint;
+}
+
+pub struct Array;
+unsafe impl BufferType for Array {
+    const BUFFER_TYPE: gl::types::GLuint = gl::ARRAY_BUFFER;
+}
+
+pub struct ElementArray;
+unsafe impl BufferType for ElementArray {
+    const BUFFER_TYPE: gl::types::GLuint = gl::ELEMENT_ARRAY_BUFFER;
+}
+
+pub struct Buffer<B: BufferType>(GLuint, PhantomData<B>);
+
+impl<B: BufferType> Buffer<B> {
+    pub fn new() -> Buffer<B> {
         let mut vbo: GLuint = 0;
         unsafe {
             gl::GenBuffers(1, &mut vbo);
         }
 
-        ArrayBuffer(vbo)
+        Buffer(vbo, PhantomData)
     }
 
     pub fn bind(&self) {
         unsafe {
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.0);
+            gl::BindBuffer(B::BUFFER_TYPE, self.0);
         }
     }
 
     pub fn unbind() {
         unsafe {
-            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+            gl::BindBuffer(B::BUFFER_TYPE, 0);
         }
     }
 
     pub fn static_draw_data<T>(&self, data: &[T]) {
         unsafe {
             gl::BufferData(
-                gl::ARRAY_BUFFER, // target
+                B::BUFFER_TYPE,                                          // target
                 (data.len() * ::std::mem::size_of::<T>()) as GLsizeiptr, // size of data in bytes
-                data.as_ptr() as *const GLvoid, // pointer to data
-                gl::STATIC_DRAW, // usage
+                data.as_ptr() as *const GLvoid,                          // pointer to data
+                gl::STATIC_DRAW,                                         // usage
             );
         }
     }
 }
 
-impl Drop for ArrayBuffer {
+impl<B: BufferType> Drop for Buffer<B> {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteBuffers(1, &mut self.0);
