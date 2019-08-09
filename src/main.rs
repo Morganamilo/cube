@@ -15,6 +15,8 @@ use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use std::ffi::CString;
 use std::time::Duration;
+use obj::{Obj, SimplePolygon};
+use std::path::Path;
 
 pub fn main() {
     let vertices: [Vertex<f32>; 4] = [
@@ -24,7 +26,19 @@ pub fn main() {
         Vertex::new(0.5, -0.5, -0.5, 0.0, 0.0, 1.0),
     ];
 
-    let indicies: [u32; 6] = [0, 1, 2, 1, 2, 3];
+    let indices: [u32; 6] = [0, 1, 2, 1, 2, 3];
+
+    let mut verticies = Vec::new();
+    let mut indices = Vec::new();
+
+
+    let (models, materials) = tobj::load_obj(&Path::new("assets/obj/cube.obj")).unwrap();
+    
+    for model in models {
+        let mesh = model.mesh;
+        verticies.extend(mesh.positions);
+        indices.extend(mesh.indices);
+    }
 
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
@@ -54,10 +68,10 @@ pub fn main() {
     color_buffer.clear();
 
     let vert_shader =
-        Shader::vert_from_cstr(&CString::new(include_str!("../assets/shader/triangle.vert")).unwrap()).unwrap();
+        Shader::vert_from_cstr(&CString::new(include_str!("../assets/shader/shader.vert")).unwrap()).unwrap();
 
     let frag_shader =
-        Shader::frag_from_cstr(&CString::new(include_str!("../assets/shader/triangle.frag")).unwrap()).unwrap();
+        Shader::frag_from_cstr(&CString::new(include_str!("../assets/shader/shader.frag")).unwrap()).unwrap();
 
     let program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
 
@@ -66,7 +80,7 @@ pub fn main() {
 
     let element_buffer = ElementArrayBuffer::new();
     element_buffer.bind();
-    element_buffer.static_draw_data(&indicies);
+    element_buffer.static_draw_data(&indices);
     ElementArrayBuffer::unbind();
 
 
@@ -111,7 +125,7 @@ pub fn main() {
         unsafe {
             gl::DrawElements(
                 gl::TRIANGLES,             // mode
-                indicies.len() as GLsizei, // number of indices to be rendered
+                indices.len() as GLsizei, // number of indices to be rendered
                 gl::UNSIGNED_INT,
                 0 as *const GLvoid, // starting index in the enabled arrays
             );
