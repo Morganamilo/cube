@@ -1,18 +1,14 @@
-mod buffer;
+mod ogl;
 mod error;
-mod program;
-mod shader;
 mod util;
-mod vertex;
-mod viewport;
-mod color_buffer;
 
-use crate::buffer::{ArrayBuffer, VertexArray};
-use crate::program::Program;
-use crate::shader::Shader;
-use crate::vertex::Vertex;
-use crate::viewport::Viewport;
-use crate::color_buffer::ColorBuffer;
+
+use crate::ogl::buffer::{ArrayBuffer, VertexArray};
+use crate::ogl::program::Program;
+use crate::ogl::shader::Shader;
+use crate::ogl::vertex::Vertex;
+use crate::ogl::viewport::Viewport;
+use crate::ogl::color_buffer::ColorBuffer;
 
 use gl::types::*;
 use sdl2::event::{Event, WindowEvent};

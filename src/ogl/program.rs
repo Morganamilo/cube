@@ -1,6 +1,6 @@
 use gl::types::GLuint;
 
-use crate::shader::Shader;
+use crate::ogl::shader::Shader;
 use crate::util::*;
 
 #[derive(Debug)]
