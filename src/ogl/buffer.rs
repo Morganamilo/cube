@@ -42,7 +42,7 @@ impl<B: BufferType> Buffer<B> {
         }
     }
 
-    pub fn static_draw_data<T>(&self, data: &[T]) {
+    pub fn static_draw_data<T>(data: &[T]) {
         unsafe {
             gl::BufferData(
                 B::BUFFER_TYPE,                                          // target
