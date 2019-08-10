@@ -10,6 +10,7 @@ use crate::ogl::texture::Texture;
 use crate::ogl::uv::UV;
 use crate::ogl::vertex::Vertex;
 use crate::ogl::viewport::Viewport;
+use crate::ogl::resources::ResourceManager;
 
 use gl::types::*;
 use nalgebra::{Matrix4, Point3, Vector3};
@@ -56,6 +57,7 @@ fn load_obj<P: AsRef<Path>>(p: P) -> Result<(Vec<u32>, Vec<f32>, Vec<f32>), tobj
 }
 
 fn main() {
+    let manager = ResourceManager::new();
     let (indices, vertices, uvs) = load_obj("assets/obj/spot_triangulated.obj").unwrap();
 
     let sdl = sdl2::init().unwrap();
@@ -111,12 +113,12 @@ fn main() {
 
     let element_buffer = ElementArrayBuffer::new();
     element_buffer.bind();
-    ElementArrayBuffer::static_draw_data(&indices);
+    ElementArrayBuffer::buffer_data(&indices);
     ElementArrayBuffer::unbind();
 
     let vbo = ArrayBuffer::new();
     vbo.bind();
-    ArrayBuffer::static_draw_data(&vertices);
+    ArrayBuffer::buffer_data(&vertices);
     Vertex::<f32>::attrib_pointer();
     ArrayBuffer::unbind();
 
@@ -136,7 +138,7 @@ fn main() {
 
     let texture_buffer = ArrayBuffer::new();
     texture_buffer.bind();
-    ArrayBuffer::static_draw_data(&uvs);
+    ArrayBuffer::buffer_data(&uvs);
     UV::<f32>::attrib_pointer();
     ArrayBuffer::unbind();
     VertexArray::unbind();

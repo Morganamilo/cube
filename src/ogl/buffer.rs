@@ -4,6 +4,12 @@ use std::marker::PhantomData;
 pub type ArrayBuffer = Buffer<Array>;
 pub type ElementArrayBuffer = Buffer<ElementArray>;
 
+pub struct ModelBuffer {
+    pub vertices: ArrayBuffer,
+    pub indices: ElementArrayBuffer,
+    pub uvs: ArrayBuffer,
+}
+
 pub unsafe trait BufferType {
     const BUFFER_TYPE: GLuint;
 }
@@ -42,7 +48,7 @@ impl<B: BufferType> Buffer<B> {
         }
     }
 
-    pub fn static_draw_data<T>(data: &[T]) {
+    pub fn buffer_data<T>(data: &[T]) {
         unsafe {
             gl::BufferData(
                 B::BUFFER_TYPE,                                          // target
