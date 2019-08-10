@@ -1,7 +1,7 @@
 pub mod buffer;
 pub mod color_buffer;
 pub mod program;
-pub mod renderer;
+pub mod render;
 pub mod resources;
 pub mod shader;
 pub mod texture;

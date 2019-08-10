@@ -1,36 +1,74 @@
 use crate::ogl::buffer::ModelBuffer;
 use crate::ogl::buffer::{ArrayBuffer, ElementArrayBuffer, VertexArray};
+use crate::ogl::texture::Texture;
 
+use image::ImageError;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
-pub enum Model {
+pub enum Models {
+    Cube,
+    Spot,
+}
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
+pub enum Textures {
     Cube,
     Spot,
 }
 
 pub struct ResourceManager {
-    models: HashMap<Model, Rc<ModelBuffer>>,
+    models: HashMap<Models, Rc<ModelBuffer>>,
+    textures: HashMap<Textures, Rc<Texture>>,
 }
 
 impl ResourceManager {
     pub fn new() -> ResourceManager {
         ResourceManager {
             models: HashMap::new(),
+            textures: HashMap::new(),
         }
     }
 
-    pub fn load_model(&mut self, model: Model) -> Result<Rc<ModelBuffer>, tobj::LoadError> {
+    pub fn load_model(&mut self, model: Models) -> Result<Rc<ModelBuffer>, tobj::LoadError> {
         match self.models.entry(model) {
             Entry::Occupied(e) => Ok(Rc::clone(e.get())),
             Entry::Vacant(e) => {
-                let buffers = load_obj("assets/obj/spot_triangulated.obj")?;
+                let buffers = match model {
+                    Models::Spot => load_obj("assets/obj/spot_triangulated.obj")?,
+                    Models::Cube => load_obj("assets/obj/cube.obj")?,
+                };
                 let buffers = Rc::new(buffers);
                 e.insert(Rc::clone(&buffers));
                 Ok(buffers)
+            }
+        }
+    }
+
+    pub fn load_texture(&mut self, texture: Textures) -> Result<Rc<Texture>, ImageError> {
+        match self.textures.entry(texture) {
+            Entry::Occupied(e) => Ok(Rc::clone(e.get())),
+            Entry::Vacant(e) => {
+                let img = match texture {
+                    Textures::Spot => image::open("assets/textures/spot_texture.png")?,
+                    Textures::Cube => image::open("assets/textures/cube.bmp")?,
+                };
+                let img = img.to_rgb();
+                let width = img.width();
+                let height = img.height();
+                let data = img.into_vec();
+
+                let texture = Texture::new();
+                texture.bind();
+                Texture::tex_image_2d(width, height, &data);
+                Texture::unbind();
+
+                let texture = Rc::new(texture);
+                e.insert(Rc::clone(&texture));
+                Ok(texture)
             }
         }
     }
@@ -71,13 +109,8 @@ fn load_obj<P: AsRef<Path>>(p: P) -> Result<ModelBuffer, tobj::LoadError> {
     ArrayBuffer::buffer_data(&uvs);
     ArrayBuffer::unbind();
 
-    let model_buffer = ModelBuffer {
-        vao,
-        vertices: vertex_buffer,
-        indices: element_buffer,
-        uvs: uv_buffer,
-        indices_count: indices.len(),
-    };
+    let model_buffer =
+        ModelBuffer::new(vao, vertex_buffer, element_buffer, uv_buffer, indices.len());
 
     Ok(model_buffer)
 }

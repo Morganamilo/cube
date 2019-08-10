@@ -8,15 +8,34 @@ pub type ArrayBuffer = Buffer<Array>;
 pub type ElementArrayBuffer = Buffer<ElementArray>;
 
 pub struct ModelBuffer {
-    pub vao: VertexArray,
-    pub vertices: ArrayBuffer,
-    pub indices: ElementArrayBuffer,
-    pub uvs: ArrayBuffer,
-    pub indices_count: usize,
+    vao: VertexArray,
+    vertices: ArrayBuffer,
+    indices: ElementArrayBuffer,
+    uvs: ArrayBuffer,
+    indices_count: usize,
 }
 
 impl ModelBuffer {
-    pub fn attrib_pointer(&self) {
+    pub fn new(
+        vao: VertexArray,
+        vertices: ArrayBuffer,
+        indices: ElementArrayBuffer,
+        uvs: ArrayBuffer,
+        indices_count: usize,
+    ) -> ModelBuffer {
+        let mb = ModelBuffer {
+            vao,
+            vertices,
+            indices,
+            uvs,
+            indices_count,
+        };
+
+        mb.attrib_pointer();
+        mb
+    }
+
+    fn attrib_pointer(&self) {
         self.vao.bind();
         self.vertices.bind();
         Vertex::<f32>::attrib_pointer();
@@ -26,10 +45,6 @@ impl ModelBuffer {
         UV::<f32>::attrib_pointer();
         ArrayBuffer::unbind();
         VertexArray::unbind();
-    }
-
-    pub fn indices_count(&self) -> usize {
-        self.indices_count
     }
 
     pub fn draw(&self) {
