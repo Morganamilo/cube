@@ -1,5 +1,5 @@
-use crate::ogl::vertex::Vertex;
 use crate::ogl::uv::UV;
+use crate::ogl::vertex::Vertex;
 
 use gl::types::*;
 use std::marker::PhantomData;
@@ -8,6 +8,7 @@ pub type ArrayBuffer = Buffer<Array>;
 pub type ElementArrayBuffer = Buffer<ElementArray>;
 
 pub struct ModelBuffer {
+    pub vao: VertexArray,
     pub vertices: ArrayBuffer,
     pub indices: ElementArrayBuffer,
     pub uvs: ArrayBuffer,
@@ -16,6 +17,7 @@ pub struct ModelBuffer {
 
 impl ModelBuffer {
     pub fn attrib_pointer(&self) {
+        self.vao.bind();
         self.vertices.bind();
         Vertex::<f32>::attrib_pointer();
         ArrayBuffer::unbind();
@@ -23,10 +25,26 @@ impl ModelBuffer {
         self.uvs.bind();
         UV::<f32>::attrib_pointer();
         ArrayBuffer::unbind();
+        VertexArray::unbind();
     }
 
     pub fn indices_count(&self) -> usize {
         self.indices_count
+    }
+
+    pub fn draw(&self) {
+        self.vao.bind();
+        self.indices.bind();
+        unsafe {
+            gl::DrawElements(
+                gl::TRIANGLES,                 // mode
+                self.indices_count as GLsizei, // number of indices to be rendered
+                gl::UNSIGNED_INT,
+                0 as *const GLvoid, // starting index in the enabled arrays
+            );
+        }
+        ElementArrayBuffer::unbind();
+        VertexArray::unbind();
     }
 }
 

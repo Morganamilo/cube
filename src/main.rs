@@ -5,12 +5,12 @@ mod util;
 use crate::ogl::buffer::{ArrayBuffer, ElementArrayBuffer, VertexArray};
 use crate::ogl::color_buffer::ColorBuffer;
 use crate::ogl::program::Program;
+use crate::ogl::resources::{Model, ResourceManager};
 use crate::ogl::shader::Shader;
 use crate::ogl::texture::Texture;
 use crate::ogl::uv::UV;
 use crate::ogl::vertex::Vertex;
 use crate::ogl::viewport::Viewport;
-use crate::ogl::resources::{ResourceManager, Model};
 
 use gl::types::*;
 use nalgebra::{Matrix4, Point3, Vector3};
@@ -87,9 +87,6 @@ fn main() {
     let model = Matrix4::identity();
     let mvp = projection * view * model;
 
-    let vao = VertexArray::new();
-    vao.bind();
-
     spot.attrib_pointer();
 
     program.use_program();
@@ -137,19 +134,7 @@ fn main() {
             gl::UniformMatrix4fv(matrix_id, 1, gl::FALSE, &mvp[0]);
         }
 
-        vao.bind();
-        spot.indices.bind();
-        unsafe {
-            gl::DrawElements(
-                gl::TRIANGLES,            // mode
-                spot.indices_count() as GLsizei, // number of indices to be rendered
-                gl::UNSIGNED_INT,
-                0 as *const GLvoid, // starting index in the enabled arrays
-            );
-        }
-
-        ElementArrayBuffer::unbind();
-        VertexArray::unbind();
+        spot.draw();
 
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));

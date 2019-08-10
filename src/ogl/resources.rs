@@ -1,10 +1,10 @@
-use crate::ogl::buffer::{ArrayBuffer, ElementArrayBuffer};
 use crate::ogl::buffer::ModelBuffer;
+use crate::ogl::buffer::{ArrayBuffer, ElementArrayBuffer, VertexArray};
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::path::Path;
+use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
 pub enum Model {
@@ -54,6 +54,8 @@ fn load_obj<P: AsRef<Path>>(p: P) -> Result<ModelBuffer, tobj::LoadError> {
         uv[1] = 1.0 - uv[1];
     }
 
+    let vao = VertexArray::new();
+
     let vertex_buffer = ArrayBuffer::new();
     vertex_buffer.bind();
     ArrayBuffer::buffer_data(&vertices);
@@ -70,12 +72,12 @@ fn load_obj<P: AsRef<Path>>(p: P) -> Result<ModelBuffer, tobj::LoadError> {
     ArrayBuffer::unbind();
 
     let model_buffer = ModelBuffer {
-       vertices: vertex_buffer,
-       indices: element_buffer,
-       uvs: uv_buffer,
-       indices_count: indices.len()
+        vao,
+        vertices: vertex_buffer,
+        indices: element_buffer,
+        uvs: uv_buffer,
+        indices_count: indices.len(),
     };
 
     Ok(model_buffer)
 }
-
