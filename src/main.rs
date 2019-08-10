@@ -10,7 +10,7 @@ use crate::ogl::texture::Texture;
 use crate::ogl::uv::UV;
 use crate::ogl::vertex::Vertex;
 use crate::ogl::viewport::Viewport;
-use crate::ogl::resources::ResourceManager;
+use crate::ogl::resources::{ResourceManager, Model};
 
 use gl::types::*;
 use nalgebra::{Matrix4, Point3, Vector3};
@@ -35,31 +35,7 @@ fn configure_gl(gl_attr: &GLAttr) {
     }
 }
 
-fn load_obj<P: AsRef<Path>>(p: P) -> Result<(Vec<u32>, Vec<f32>, Vec<f32>), tobj::LoadError> {
-    let mut vertices = Vec::new();
-    let mut indices = Vec::new();
-    let mut uvs = Vec::new();
-
-    let (models, materials) = tobj::load_obj(p.as_ref())?;
-
-    for model in models {
-        let mesh = model.mesh;
-        indices.extend(mesh.indices);
-        vertices.extend(mesh.positions);
-        uvs.extend(mesh.texcoords);
-    }
-
-    for uv in uvs.chunks_mut(2) {
-        uv[1] = 1.0 - uv[1];
-    }
-
-    Ok((indices, vertices, uvs))
-}
-
 fn main() {
-    let manager = ResourceManager::new();
-    let (indices, vertices, uvs) = load_obj("assets/obj/spot_triangulated.obj").unwrap();
-
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
 
@@ -75,6 +51,9 @@ fn main() {
     let gl = gl::load_with(|s| video.gl_get_proc_address(s) as *const c_void);
     let gl_attr = video.gl_attr();
     configure_gl(&gl_attr);
+
+    let mut manager = ResourceManager::new();
+    let spot = manager.load_model(Model::Spot).unwrap();
 
     let mut viewport = Viewport::for_window(1600, 900);
     viewport.use_viewport();
@@ -111,16 +90,7 @@ fn main() {
     let vao = VertexArray::new();
     vao.bind();
 
-    let element_buffer = ElementArrayBuffer::new();
-    element_buffer.bind();
-    ElementArrayBuffer::buffer_data(&indices);
-    ElementArrayBuffer::unbind();
-
-    let vbo = ArrayBuffer::new();
-    vbo.bind();
-    ArrayBuffer::buffer_data(&vertices);
-    Vertex::<f32>::attrib_pointer();
-    ArrayBuffer::unbind();
+    spot.attrib_pointer();
 
     program.use_program();
 
@@ -135,13 +105,6 @@ fn main() {
     let texture = Texture::new();
     texture.bind();
     Texture::tex_image_2d(width, height, &data);
-
-    let texture_buffer = ArrayBuffer::new();
-    texture_buffer.bind();
-    ArrayBuffer::buffer_data(&uvs);
-    UV::<f32>::attrib_pointer();
-    ArrayBuffer::unbind();
-    VertexArray::unbind();
 
     let mut event_pump = sdl.event_pump().unwrap();
     let mut i = 0.0;
@@ -175,11 +138,11 @@ fn main() {
         }
 
         vao.bind();
-        element_buffer.bind();
+        spot.indices.bind();
         unsafe {
             gl::DrawElements(
                 gl::TRIANGLES,            // mode
-                indices.len() as GLsizei, // number of indices to be rendered
+                spot.indices_count() as GLsizei, // number of indices to be rendered
                 gl::UNSIGNED_INT,
                 0 as *const GLvoid, // starting index in the enabled arrays
             );

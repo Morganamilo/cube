@@ -1,3 +1,6 @@
+use crate::ogl::vertex::Vertex;
+use crate::ogl::uv::UV;
+
 use gl::types::*;
 use std::marker::PhantomData;
 
@@ -8,6 +11,23 @@ pub struct ModelBuffer {
     pub vertices: ArrayBuffer,
     pub indices: ElementArrayBuffer,
     pub uvs: ArrayBuffer,
+    pub indices_count: usize,
+}
+
+impl ModelBuffer {
+    pub fn attrib_pointer(&self) {
+        self.vertices.bind();
+        Vertex::<f32>::attrib_pointer();
+        ArrayBuffer::unbind();
+
+        self.uvs.bind();
+        UV::<f32>::attrib_pointer();
+        ArrayBuffer::unbind();
+    }
+
+    pub fn indices_count(&self) -> usize {
+        self.indices_count
+    }
 }
 
 pub unsafe trait BufferType {

@@ -23,11 +23,11 @@ impl ResourceManager {
         }
     }
 
-    pub fn load_obj(&mut self, model: Model) -> Result<Rc<ModelBuffer>, tobj::LoadError> {
+    pub fn load_model(&mut self, model: Model) -> Result<Rc<ModelBuffer>, tobj::LoadError> {
         match self.models.entry(model) {
             Entry::Occupied(e) => Ok(Rc::clone(e.get())),
             Entry::Vacant(e) => {
-                let buffers = load_obj("foo")?;
+                let buffers = load_obj("assets/obj/spot_triangulated.obj")?;
                 let buffers = Rc::new(buffers);
                 e.insert(Rc::clone(&buffers));
                 Ok(buffers)
@@ -73,6 +73,7 @@ fn load_obj<P: AsRef<Path>>(p: P) -> Result<ModelBuffer, tobj::LoadError> {
        vertices: vertex_buffer,
        indices: element_buffer,
        uvs: uv_buffer,
+       indices_count: indices.len()
     };
 
     Ok(model_buffer)
