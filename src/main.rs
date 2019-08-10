@@ -5,6 +5,7 @@ mod util;
 use crate::ogl::buffer::{ArrayBuffer, ElementArrayBuffer, VertexArray};
 use crate::ogl::color_buffer::ColorBuffer;
 use crate::ogl::program::Program;
+use crate::ogl::renderer::Renderer;
 use crate::ogl::resources::{Model, ResourceManager};
 use crate::ogl::shader::Shader;
 use crate::ogl::texture::Texture;
@@ -36,6 +37,11 @@ fn configure_gl(gl_attr: &GLAttr) {
 }
 
 fn main() {
+    let mut renderer = Renderer::new();
+    renderer.main_loop();
+}
+
+fn main2() {
     let sdl = sdl2::init().unwrap();
     let video = sdl.video().unwrap();
 
@@ -47,8 +53,8 @@ fn main() {
         .build()
         .unwrap();
 
+    gl::load_with(|s| video.gl_get_proc_address(s) as *const c_void);
     let mut canvas = window.into_canvas().build().unwrap();
-    let gl = gl::load_with(|s| video.gl_get_proc_address(s) as *const c_void);
     let gl_attr = video.gl_attr();
     configure_gl(&gl_attr);
 
@@ -139,6 +145,4 @@ fn main() {
         canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
-
-    drop(gl);
 }
