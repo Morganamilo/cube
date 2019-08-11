@@ -71,14 +71,12 @@ impl Transform {
 
     pub fn look_at(&mut self, target: Vector3<f32>) {
         let dir = (target - self.pos.coords).normalize();
-        let mut up = -self.up();
+        //let mut up = -self.up().abs();
+        let mut up = Vector3::<f32>::y();
 
-        println!("{:?}", dir);
-        println!("{:?}", up);
-
-
-        if dir.x.abs() - up.x.abs() < 0.001 && dir.y.abs() - up.y.abs() < 0.001 && dir.z.abs() - up.z.abs() < 0.001 {
-            up = self.forward();
+        if (dir.abs() - up).abs().sum() < 0.001 {
+            //up = self.forward();
+            up = Vector3::z();
         }
 
         self.rot = UnitQuaternion::face_towards(&dir, &up);

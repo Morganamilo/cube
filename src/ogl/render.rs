@@ -14,8 +14,8 @@ use sdl2::keyboard::Scancode;
 use sdl2::render::WindowCanvas;
 use sdl2::video::gl_attr::GLAttr;
 use sdl2::video::GLProfile::Core;
-use sdl2::Sdl;
 use sdl2::EventPump;
+use sdl2::Sdl;
 use std::cell::RefCell;
 use std::ffi::{c_void, CString};
 use std::path::Path;
@@ -80,10 +80,7 @@ impl Renderer {
             .unwrap();
 
         gl::load_with(|s| video.gl_get_proc_address(s) as *const c_void);
-        let mut canvas = window.into_canvas()
-
-            .present_vsync()
-            .build().unwrap();
+        let mut canvas = window.into_canvas().present_vsync().build().unwrap();
         let gl_attr = video.gl_attr();
         Self::configure_gl(&gl_attr);
 
@@ -165,7 +162,6 @@ impl Renderer {
 
                 self.event(&event);
             }
-
 
             let mut color_buffer = ColorBuffer::from_color(Vector3::new(0.5, 0.0, 0.5));
             color_buffer.use_color_buffer();
