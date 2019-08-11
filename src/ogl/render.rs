@@ -53,12 +53,12 @@ impl Renderer {
 
     fn init_program() -> Program {
         let vert_shader = Shader::vert_from_cstr(
-            &CString::new(include_str!("../../assets/shaders/shader.vert")).unwrap(),
+            &CString::new(include_str!("../../assets/shaders/shader.vs")).unwrap(),
         )
         .unwrap();
 
         let frag_shader = Shader::frag_from_cstr(
-            &CString::new(include_str!("../../assets/shaders/shader.frag")).unwrap(),
+            &CString::new(include_str!("../../assets/shaders/shader.fs")).unwrap(),
         )
         .unwrap();
 
@@ -125,18 +125,13 @@ impl Renderer {
         }
     }
 
-    pub fn set_mvp(&self, model: Matrix4<f32>) {
+    pub fn set_model(&self, model: Matrix4<f32>) {
         self.program.set_mat4("model", model);
-        self.program.set_mat4("view", self.camera.transform.view());
-        self.program
-            .set_mat4("projection", self.camera.projection());
-
-        let mvp = self.camera.projection() * self.camera.transform.view() * model;
-        self.program.set_mat4("MVP", mvp)
     }
 
     pub fn main_loop(&mut self) {
         let mut event_pump = self.sdl.event_pump().unwrap();
+        let mut i = 0.0;
 
         'running: loop {
             for event in event_pump.poll_iter() {
@@ -156,14 +151,27 @@ impl Renderer {
                 self.event(&event);
             }
 
+            self.tick(&event_pump);
+
             let mut color_buffer = ColorBuffer::from_color(Vector3::new(0.5, 0.0, 0.5));
             color_buffer.use_color_buffer();
             color_buffer.clear();
 
-            self.tick(&event_pump);
+            let mut i = 0.8;
+            let pos = self.camera.transform.pos;
+            self.program.set_3f("lightColor", [i, i, i]);
+            self.program.set_3f("lightPos", [0.0, -10.0, -0.0]);
+            self.program.set_3f("viewPos", [pos.x, pos.y, pos.z]);
+            self.program.set_mat4("view", self.camera.transform.view());
+            self.program
+                .set_mat4("projection", self.camera.projection());
+
             self.render();
             self.canvas.present();
             //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+
+            i += 0.01;
+            i %= 1.0;
         }
     }
 }

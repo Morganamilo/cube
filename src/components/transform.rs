@@ -1,5 +1,6 @@
 use nalgebra::{Matrix4, Point3, Rotation3, UnitQuaternion, Vector3};
 
+#[derive(Copy, Clone, Debug)]
 pub struct Transform {
     pub pos: Point3<f32>,
     pub scale: Vector3<f32>,

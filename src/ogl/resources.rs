@@ -80,6 +80,7 @@ fn load_obj<P: AsRef<Path>>(p: P) -> Result<Vec<ModelBuffer>, tobj::LoadError> {
     let mut buffers = Vec::with_capacity(models.len());
 
     for model in models {
+        println!("{}", model.name);
         let mesh = &model.mesh;
 
         let vao = VertexArray::new();
@@ -101,7 +102,11 @@ fn load_obj<P: AsRef<Path>>(p: P) -> Result<Vec<ModelBuffer>, tobj::LoadError> {
 
         let uv_buffer = ArrayBuffer::new();
         uv_buffer.bind();
-        let uvs = mesh.texcoords.chunks(2).map(|uv| [uv[0], 1.0- uv[1]]).collect::<Vec<_>>();
+        let uvs = mesh
+            .texcoords
+            .chunks(2)
+            .map(|uv| [uv[0], 1.0 - uv[1]])
+            .collect::<Vec<_>>();
         ArrayBuffer::buffer_data(&uvs);
         ArrayBuffer::unbind();
 

@@ -1,4 +1,5 @@
 #version 320 es
+#
 // Input vertex data, different for all executions of this shader.
 layout(location = 0) in vec3 vertex;
 layout(location = 1) in vec2 vertexUV;
@@ -21,6 +22,5 @@ void main() {
     fragPos = vec3(model * vec4(vertex, 1.0));
     normal = mat3(transpose(inverse(model))) * vertexNormal;
     gl_Position = projection * view * vec4(fragPos, 1.0);
-    //gl_Position =  MVP * vec4(vertex,1);
     UV = vertexUV;
 }
