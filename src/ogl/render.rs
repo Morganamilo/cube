@@ -1,15 +1,21 @@
+use gl::types::*;
+
+use crate::components::camera::Camera;
+use crate::components::transform::Transform;
 use crate::ogl::color_buffer::ColorBuffer;
 use crate::ogl::program::Program;
 use crate::ogl::shader::Shader;
 use crate::ogl::viewport::Viewport;
 
-use nalgebra::{Matrix4, Point3, Vector3};
+use nalgebra::{Matrix4, Point3, Rotation3, UnitQuaternion, Vector3};
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
+use sdl2::keyboard::Scancode;
 use sdl2::render::WindowCanvas;
 use sdl2::video::gl_attr::GLAttr;
 use sdl2::video::GLProfile::Core;
 use sdl2::Sdl;
+use sdl2::EventPump;
 use std::cell::RefCell;
 use std::ffi::{c_void, CString};
 use std::path::Path;
@@ -17,7 +23,7 @@ use std::time::Duration;
 
 pub trait RenderObject {
     fn on_render(&mut self, renderer: &Renderer) {}
-    fn on_tick(&mut self, renderer: &Renderer) {}
+    fn on_tick(&mut self, event_pump: &EventPump, renderer: &Renderer) {}
     fn on_add(&mut self, renderer: &Renderer) {}
     fn on_event(&mut self, event: &Event) {}
 }
@@ -27,6 +33,9 @@ pub struct Renderer {
     sdl: Sdl,
     viewport: Viewport,
     render_objects: Vec<Box<RefCell<dyn RenderObject>>>,
+    camera: Camera,
+    mvp_id: GLint,
+    program: Program,
 }
 
 impl Renderer {
@@ -71,7 +80,10 @@ impl Renderer {
             .unwrap();
 
         gl::load_with(|s| video.gl_get_proc_address(s) as *const c_void);
-        let mut canvas = window.into_canvas().build().unwrap();
+        let mut canvas = window.into_canvas()
+
+            .present_vsync()
+            .build().unwrap();
         let gl_attr = video.gl_attr();
         Self::configure_gl(&gl_attr);
 
@@ -79,12 +91,22 @@ impl Renderer {
         viewport.use_viewport();
 
         let render_objects = Vec::new();
+        let camera = Camera::default();
+
+        let program = Self::init_program();
+        program.use_program();
+
+        let mvp_id =
+            unsafe { gl::GetUniformLocation(program.id(), CString::new("MVP").unwrap().as_ptr()) };
 
         Renderer {
             sdl,
             canvas,
             viewport,
             render_objects,
+            camera,
+            mvp_id,
+            program,
         }
     }
 
@@ -93,13 +115,13 @@ impl Renderer {
         self.render_objects.push(o);
     }
 
-    fn tick(&self) {
+    fn tick(&mut self, event_pump: &EventPump) {
         for object in &self.render_objects {
-            object.borrow_mut().on_tick(self);
+            object.borrow_mut().on_tick(event_pump, self);
         }
     }
 
-    fn render(&self) {
+    fn render(&mut self) {
         for object in &self.render_objects {
             object.borrow_mut().on_render(self);
         }
@@ -111,29 +133,16 @@ impl Renderer {
         }
     }
 
-    fn mvp() -> Matrix4<f32> {
-        let projection = Matrix4::new_perspective(16.0 / 9.0, f32::to_radians(45.0), 0.1, 100.0);
-        let view = Matrix4::look_at_rh(
-            &Point3::new(-1.0, 0.8, -2.5),
-            &Point3::new(0.0, 0.0, 0.0),
-            &Vector3::new(0.0, 1.0, 0.0),
-        );
+    pub fn set_mvp(&self, model: Matrix4<f32>) {
+        let mvp = self.camera.projection() * self.camera.transform.view() * model;
 
-        let model = Matrix4::identity();
-        let mvp = projection * view * model;
-        mvp
+        unsafe {
+            gl::UniformMatrix4fv(self.mvp_id, 1, gl::FALSE, &mvp[0]);
+        }
     }
 
     pub fn main_loop(&mut self) {
         let mut event_pump = self.sdl.event_pump().unwrap();
-        let mut i = 0.0;
-
-        let program = Self::init_program();
-        program.use_program();
-
-        let matrix_id =
-            unsafe { gl::GetUniformLocation(program.id(), CString::new("MVP").unwrap().as_ptr()) };
-        let mvp = Self::mvp();
 
         'running: loop {
             for event in event_pump.poll_iter() {
@@ -157,19 +166,15 @@ impl Renderer {
                 self.event(&event);
             }
 
-            let mut color_buffer = ColorBuffer::from_color(Vector3::new(0.5, i, 0.5));
+
+            let mut color_buffer = ColorBuffer::from_color(Vector3::new(0.5, 0.0, 0.5));
             color_buffer.use_color_buffer();
             color_buffer.clear();
 
-            unsafe {
-                gl::UniformMatrix4fv(matrix_id, 1, gl::FALSE, &mvp[0]);
-            }
-
-            self.tick();
+            self.tick(&event_pump);
             self.render();
-
             self.canvas.present();
-            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+            //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
         }
     }
 }
