@@ -39,7 +39,7 @@ impl ResourceManager {
             Entry::Vacant(e) => {
                 let buffers = match model {
                     Models::Spot => load_obj("assets/obj/spot_triangulated.obj")?,
-                    Models::Cube => load_obj("assets/obj/cube.obj")?,
+                    Models::Cube => load_obj("assets/obj/rcube.obj")?,
                 };
                 let buffers = Rc::new(buffers);
                 e.insert(Rc::clone(&buffers));
@@ -75,17 +75,21 @@ impl ResourceManager {
 }
 
 fn load_obj<P: AsRef<Path>>(p: P) -> Result<ModelBuffer, tobj::LoadError> {
-    let mut vertices = Vec::new();
-    let mut indices = Vec::new();
-    let mut uvs = Vec::new();
+    let mut vertices = Vec::<f32>::new();
+    let mut indices = Vec::<u32>::new();
+    let mut normals = Vec::<f32>::new();
+    let mut uvs = Vec::<f32>::new();
 
     let (models, materials) = tobj::load_obj(p.as_ref())?;
 
-    for model in models {
-        let mesh = model.mesh;
-        indices.extend(mesh.indices);
-        vertices.extend(mesh.positions);
-        uvs.extend(mesh.texcoords);
+    for model in &models {
+        let mesh = &model.mesh;
+        let size = vertices.len();
+        indices.extend(mesh.indices.iter().map(|&i| i + size as u32));
+        //indices.extend(&mesh.indices);
+        vertices.extend(&mesh.positions);
+        uvs.extend(&mesh.texcoords);
+        normals.extend(&mesh.normals);
     }
 
     for uv in uvs.chunks_mut(2) {
@@ -104,13 +108,27 @@ fn load_obj<P: AsRef<Path>>(p: P) -> Result<ModelBuffer, tobj::LoadError> {
     ElementArrayBuffer::buffer_data(&indices);
     ElementArrayBuffer::unbind();
 
+    let normal_buffer = ArrayBuffer::new();
+    normal_buffer.bind();
+    ArrayBuffer::buffer_data(&normals);
+    ArrayBuffer::unbind();
+
     let uv_buffer = ArrayBuffer::new();
     uv_buffer.bind();
     ArrayBuffer::buffer_data(&uvs);
     ArrayBuffer::unbind();
 
-    let model_buffer =
-        ModelBuffer::new(vao, vertex_buffer, element_buffer, uv_buffer, indices.len());
+    let material = models[0].mesh.material_id.map(|id| materials[id].clone());
+
+    let model_buffer = ModelBuffer::new(
+        vao,
+        vertex_buffer,
+        element_buffer,
+        normal_buffer,
+        uv_buffer,
+        indices.len(),
+        material,
+    );
 
     Ok(model_buffer)
 }

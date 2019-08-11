@@ -1,7 +1,7 @@
 use gl::types::*;
 
-use crate::ogl::camera::Camera;
 use crate::components::transform::Transform;
+use crate::ogl::camera::Camera;
 use crate::ogl::color_buffer::ColorBuffer;
 use crate::ogl::program::Program;
 use crate::ogl::shader::Shader;
@@ -34,8 +34,7 @@ pub struct Renderer {
     viewport: Viewport,
     render_objects: Vec<Box<RefCell<dyn WorldObject>>>,
     camera: Camera,
-    mvp_id: GLint,
-    program: Program,
+    pub program: Program,
 }
 
 impl Renderer {
@@ -93,16 +92,12 @@ impl Renderer {
         let program = Self::init_program();
         program.use_program();
 
-        let mvp_id =
-            unsafe { gl::GetUniformLocation(program.id(), CString::new("MVP").unwrap().as_ptr()) };
-
         Renderer {
             sdl,
             canvas,
             viewport,
             render_objects,
             camera,
-            mvp_id,
             program,
         }
     }
@@ -131,11 +126,13 @@ impl Renderer {
     }
 
     pub fn set_mvp(&self, model: Matrix4<f32>) {
-        let mvp = self.camera.projection() * self.camera.transform.view() * model;
+        self.program.set_mat4("model", model);
+        self.program.set_mat4("view", self.camera.transform.view());
+        self.program
+            .set_mat4("projection", self.camera.projection());
 
-        unsafe {
-            gl::UniformMatrix4fv(self.mvp_id, 1, gl::FALSE, &mvp[0]);
-        }
+        let mvp = self.camera.projection() * self.camera.transform.view() * model;
+        self.program.set_mat4("MVP", mvp)
     }
 
     pub fn main_loop(&mut self) {
@@ -152,11 +149,7 @@ impl Renderer {
                         self.viewport.set_size(w, h);
                         self.viewport.use_viewport();
                     }
-                    Event::Quit { .. }
-                    | Event::KeyDown {
-                        keycode: Some(Keycode::Escape),
-                        ..
-                    } => break 'running,
+                    Event::Quit { .. } => break 'running,
                     _ => {}
                 }
 

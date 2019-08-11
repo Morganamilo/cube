@@ -2,14 +2,15 @@ mod components;
 mod error;
 mod ogl;
 mod util;
+mod world_object;
 
 use crate::components::transform::Transform;
 use crate::ogl::buffer::ModelBuffer;
 use crate::ogl::buffer::{ArrayBuffer, ElementArrayBuffer, VertexArray};
 use crate::ogl::color_buffer::ColorBuffer;
 use crate::ogl::program::Program;
-use crate::ogl::render::WorldObject;
 use crate::ogl::render::Renderer;
+use crate::ogl::render::WorldObject;
 use crate::ogl::resources::{Models, ResourceManager, Textures};
 use crate::ogl::shader::Shader;
 use crate::ogl::texture::Texture;
@@ -39,9 +40,9 @@ struct ExampleObject {
 impl WorldObject for ExampleObject {
     fn on_render(&mut self, renderer: &Renderer) {
         renderer.set_mvp(self.transform.model());
-        self.texture.bind();
-        self.buffer.draw();
-        Texture::unbind();
+        //self.texture.bind();
+        self.buffer.draw(renderer);
+        //Texture::unbind();
     }
 
     fn on_tick(&mut self, event_pump: &EventPump, renderer: &Renderer) {
@@ -112,9 +113,10 @@ impl WorldObject for ExampleObject {
 
 impl ExampleObject {
     fn new(manager: &mut ResourceManager) -> ExampleObject {
-        let spot_mod = manager.load_model(Models::Spot).unwrap();
+        let spot_mod = manager.load_model(Models::Cube).unwrap();
         let spot_tex = manager.load_texture(Textures::Spot).unwrap();
         let mut transform = Transform::default();
+        transform.translate(Vector3::z() * 2.0);
         transform.rot_offset = UnitQuaternion::from(Rotation3::from_euler_angles(
             f32::to_radians(180.0),
             f32::to_radians(0.0),

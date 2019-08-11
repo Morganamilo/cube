@@ -1,8 +1,11 @@
+use crate::ogl::normal::Normal;
+use crate::ogl::render::Renderer;
 use crate::ogl::uv::UV;
 use crate::ogl::vertex::Vertex;
 
 use gl::types::*;
 use std::marker::PhantomData;
+use tobj::Material;
 
 pub type ArrayBuffer = Buffer<Array>;
 pub type ElementArrayBuffer = Buffer<ElementArray>;
@@ -11,8 +14,10 @@ pub struct ModelBuffer {
     vao: VertexArray,
     vertices: ArrayBuffer,
     indices: ElementArrayBuffer,
+    normals: ArrayBuffer,
     uvs: ArrayBuffer,
     indices_count: usize,
+    material: Option<Material>,
 }
 
 impl ModelBuffer {
@@ -20,15 +25,19 @@ impl ModelBuffer {
         vao: VertexArray,
         vertices: ArrayBuffer,
         indices: ElementArrayBuffer,
+        normals: ArrayBuffer,
         uvs: ArrayBuffer,
         indices_count: usize,
+        material: Option<Material>,
     ) -> ModelBuffer {
         let mb = ModelBuffer {
             vao,
             vertices,
             indices,
+            normals,
             uvs,
             indices_count,
+            material,
         };
 
         mb.attrib_pointer();
@@ -41,15 +50,28 @@ impl ModelBuffer {
         Vertex::<f32>::attrib_pointer();
         ArrayBuffer::unbind();
 
+        self.normals.bind();
+        Normal::<f32>::attrib_pointer();
+        ArrayBuffer::unbind();
+
         self.uvs.bind();
         UV::<f32>::attrib_pointer();
         ArrayBuffer::unbind();
         VertexArray::unbind();
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, renderer: &Renderer) {
         self.vao.bind();
         self.indices.bind();
+
+        let program = &renderer.program;
+        if let Some(material) = &self.material {
+            program.set_3f("ambient", material.ambient);
+            program.set_3f("diffuse", material.diffuse);
+            program.set_3f("ambient", material.specular);
+            program.set_1f("shininess", material.shininess);
+        }
+
         unsafe {
             gl::DrawElements(
                 gl::TRIANGLES,                 // mode
