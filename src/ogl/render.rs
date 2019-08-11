@@ -1,6 +1,6 @@
 use gl::types::*;
 
-use crate::components::camera::Camera;
+use crate::ogl::camera::Camera;
 use crate::components::transform::Transform;
 use crate::ogl::color_buffer::ColorBuffer;
 use crate::ogl::program::Program;
@@ -21,7 +21,7 @@ use std::ffi::{c_void, CString};
 use std::path::Path;
 use std::time::Duration;
 
-pub trait RenderObject {
+pub trait WorldObject {
     fn on_render(&mut self, renderer: &Renderer) {}
     fn on_tick(&mut self, event_pump: &EventPump, renderer: &Renderer) {}
     fn on_add(&mut self, renderer: &Renderer) {}
@@ -32,7 +32,7 @@ pub struct Renderer {
     canvas: WindowCanvas,
     sdl: Sdl,
     viewport: Viewport,
-    render_objects: Vec<Box<RefCell<dyn RenderObject>>>,
+    render_objects: Vec<Box<RefCell<dyn WorldObject>>>,
     camera: Camera,
     mvp_id: GLint,
     program: Program,
@@ -107,7 +107,7 @@ impl Renderer {
         }
     }
 
-    pub fn add_object<O: RenderObject + 'static>(&mut self, o: O) {
+    pub fn add_object<O: WorldObject + 'static>(&mut self, o: O) {
         let o = Box::new(RefCell::new(o));
         self.render_objects.push(o);
     }

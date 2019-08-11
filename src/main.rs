@@ -8,7 +8,7 @@ use crate::ogl::buffer::ModelBuffer;
 use crate::ogl::buffer::{ArrayBuffer, ElementArrayBuffer, VertexArray};
 use crate::ogl::color_buffer::ColorBuffer;
 use crate::ogl::program::Program;
-use crate::ogl::render::RenderObject;
+use crate::ogl::render::WorldObject;
 use crate::ogl::render::Renderer;
 use crate::ogl::resources::{Models, ResourceManager, Textures};
 use crate::ogl::shader::Shader;
@@ -36,7 +36,7 @@ struct ExampleObject {
     transform: Transform,
 }
 
-impl RenderObject for ExampleObject {
+impl WorldObject for ExampleObject {
     fn on_render(&mut self, renderer: &Renderer) {
         renderer.set_mvp(self.transform.model());
         self.texture.bind();

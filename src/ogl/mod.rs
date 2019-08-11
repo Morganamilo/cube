@@ -8,3 +8,4 @@ pub mod texture;
 pub mod uv;
 pub mod vertex;
 pub mod viewport;
+pub mod camera;
