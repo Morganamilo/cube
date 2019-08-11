@@ -45,26 +45,20 @@ impl RenderObject for ExampleObject {
     }
 
     fn on_tick(&mut self, event_pump: &EventPump, renderer: &Renderer) {
-        if event_pump.keyboard_state().is_scancode_pressed(Scancode::W) {
-            self.transform
-                .relative_translate(Vector3::new(0.0, 0.0, 0.1));
+        let kb = &event_pump.keyboard_state();
+        if kb.is_scancode_pressed(Scancode::W) {
+            self.transform.relative_translate(Vector3::z() * 0.1);
         }
-        if event_pump.keyboard_state().is_scancode_pressed(Scancode::A) {
-            self.transform
-                .relative_translate(Vector3::new(-0.1, 0.0, 0.0));
+        if kb.is_scancode_pressed(Scancode::A) {
+            self.transform.relative_translate(-Vector3::x() * 0.1);
         }
-        if event_pump.keyboard_state().is_scancode_pressed(Scancode::D) {
-            self.transform
-                .relative_translate(Vector3::new(0.1, 0.0, 0.0));
+        if kb.is_scancode_pressed(Scancode::D) {
+            self.transform.relative_translate(Vector3::x() * 0.1);
         }
-        if event_pump.keyboard_state().is_scancode_pressed(Scancode::S) {
-            self.transform
-                .relative_translate(Vector3::new(0.0, 0.0, -0.1));
+        if kb.is_scancode_pressed(Scancode::S) {
+            self.transform.relative_translate(-Vector3::z() * 0.1);
         }
-        if event_pump
-            .keyboard_state()
-            .is_scancode_pressed(Scancode::Left)
-        {
+        if kb.is_scancode_pressed(Scancode::Left) {
             self.transform
                 .relative_rotate_euler(Rotation3::from_euler_angles(
                     0.0,
@@ -72,14 +66,11 @@ impl RenderObject for ExampleObject {
                     0.0,
                 ))
         }
-        if event_pump
-            .keyboard_state()
-            .is_scancode_pressed(Scancode::Right)
-        {
+        if kb.is_scancode_pressed(Scancode::Right) {
             self.transform
                 .relative_rotate_euler(Rotation3::from_euler_angles(0.0, f32::to_radians(4.0), 0.0))
         }
-        if event_pump.keyboard_state().is_scancode_pressed(Scancode::Q) {
+        if kb.is_scancode_pressed(Scancode::Q) {
             self.transform
                 .relative_rotate_euler(Rotation3::from_euler_angles(
                     0.0,
@@ -87,14 +78,11 @@ impl RenderObject for ExampleObject {
                     f32::to_radians(-4.0),
                 ))
         }
-        if event_pump.keyboard_state().is_scancode_pressed(Scancode::E) {
+        if kb.is_scancode_pressed(Scancode::E) {
             self.transform
                 .relative_rotate_euler(Rotation3::from_euler_angles(0.0, 0.0, f32::to_radians(4.0)))
         }
-        if event_pump
-            .keyboard_state()
-            .is_scancode_pressed(Scancode::Up)
-        {
+        if kb.is_scancode_pressed(Scancode::Up) {
             self.transform
                 .relative_rotate_euler(Rotation3::from_euler_angles(
                     f32::to_radians(-4.0),
@@ -102,34 +90,22 @@ impl RenderObject for ExampleObject {
                     0.0,
                 ))
         }
-        if event_pump
-            .keyboard_state()
-            .is_scancode_pressed(Scancode::Down)
-        {
+        if kb.is_scancode_pressed(Scancode::Down) {
             self.transform
                 .relative_rotate_euler(Rotation3::from_euler_angles(f32::to_radians(4.0), 0.0, 0.0))
         }
-        if event_pump
-            .keyboard_state()
-            .is_scancode_pressed(Scancode::Equals)
-        {
-            self.transform.scale += Vector3::new(0.1, 0.1, 0.1);
+        if kb.is_scancode_pressed(Scancode::Equals) {
+            self.transform.scale += Vector3::repeat(0.02);
         }
-        if event_pump
-            .keyboard_state()
-            .is_scancode_pressed(Scancode::Minus)
-        {
-            self.transform.scale -= Vector3::new(0.1, 0.1, 0.1);
+        if kb.is_scancode_pressed(Scancode::Minus) {
+            self.transform.scale -= Vector3::repeat(0.02);
         }
-        if event_pump
-            .keyboard_state()
-            .is_scancode_pressed(Scancode::Space)
-        {
+        if kb.is_scancode_pressed(Scancode::Space) {
             self.transform.look_at(Vector3::zeros());
         }
-        if event_pump.keyboard_state().is_scancode_pressed(Scancode::U) {
+        if kb.is_scancode_pressed(Scancode::U) {
             self.transform
-                .look_at(self.transform.pos.coords + self.transform.up());
+                .look_at(self.transform.pos.coords - Vector3::y());
         }
     }
 }
