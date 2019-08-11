@@ -32,7 +32,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 struct ExampleObject {
-    buffer: Rc<ModelBuffer>,
+    buffer: Rc<Vec<ModelBuffer>>,
     texture: Rc<Texture>,
     transform: Transform,
 }
@@ -40,9 +40,11 @@ struct ExampleObject {
 impl WorldObject for ExampleObject {
     fn on_render(&mut self, renderer: &Renderer) {
         renderer.set_mvp(self.transform.model());
-        //self.texture.bind();
-        self.buffer.draw(renderer);
-        //Texture::unbind();
+        self.texture.bind();
+        for buffer in self.buffer.iter() {
+            buffer.draw(renderer);
+        }
+        Texture::unbind();
     }
 
     fn on_tick(&mut self, event_pump: &EventPump, renderer: &Renderer) {

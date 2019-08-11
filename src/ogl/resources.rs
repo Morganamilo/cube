@@ -21,7 +21,7 @@ pub enum Textures {
 }
 
 pub struct ResourceManager {
-    models: HashMap<Models, Rc<ModelBuffer>>,
+    models: HashMap<Models, Rc<Vec<ModelBuffer>>>,
     textures: HashMap<Textures, Rc<Texture>>,
 }
 
@@ -33,7 +33,7 @@ impl ResourceManager {
         }
     }
 
-    pub fn load_model(&mut self, model: Models) -> Result<Rc<ModelBuffer>, tobj::LoadError> {
+    pub fn load_model(&mut self, model: Models) -> Result<Rc<Vec<ModelBuffer>>, tobj::LoadError> {
         match self.models.entry(model) {
             Entry::Occupied(e) => Ok(Rc::clone(e.get())),
             Entry::Vacant(e) => {
@@ -74,61 +74,51 @@ impl ResourceManager {
     }
 }
 
-fn load_obj<P: AsRef<Path>>(p: P) -> Result<ModelBuffer, tobj::LoadError> {
-    let mut vertices = Vec::<f32>::new();
-    let mut indices = Vec::<u32>::new();
-    let mut normals = Vec::<f32>::new();
-    let mut uvs = Vec::<f32>::new();
-
+fn load_obj<P: AsRef<Path>>(p: P) -> Result<Vec<ModelBuffer>, tobj::LoadError> {
     let (models, materials) = tobj::load_obj(p.as_ref())?;
 
-    for model in &models {
+    let mut buffers = Vec::with_capacity(models.len());
+
+    for model in models {
         let mesh = &model.mesh;
-        let size = vertices.len();
-        indices.extend(mesh.indices.iter().map(|&i| i + size as u32));
-        //indices.extend(&mesh.indices);
-        vertices.extend(&mesh.positions);
-        uvs.extend(&mesh.texcoords);
-        normals.extend(&mesh.normals);
+
+        let vao = VertexArray::new();
+
+        let vertex_buffer = ArrayBuffer::new();
+        vertex_buffer.bind();
+        ArrayBuffer::buffer_data(&mesh.positions);
+        ArrayBuffer::unbind();
+
+        let element_buffer = ElementArrayBuffer::new();
+        element_buffer.bind();
+        ElementArrayBuffer::buffer_data(&mesh.indices);
+        ElementArrayBuffer::unbind();
+
+        let normal_buffer = ArrayBuffer::new();
+        normal_buffer.bind();
+        ArrayBuffer::buffer_data(&mesh.normals);
+        ArrayBuffer::unbind();
+
+        let uv_buffer = ArrayBuffer::new();
+        uv_buffer.bind();
+        let uvs = mesh.texcoords.chunks(2).map(|uv| [uv[0], 1.0- uv[1]]).collect::<Vec<_>>();
+        ArrayBuffer::buffer_data(&uvs);
+        ArrayBuffer::unbind();
+
+        let material = model.mesh.material_id.map(|id| materials[id].clone());
+
+        let model_buffer = ModelBuffer::new(
+            vao,
+            vertex_buffer,
+            element_buffer,
+            normal_buffer,
+            uv_buffer,
+            mesh.indices.len(),
+            material,
+        );
+
+        buffers.push(model_buffer);
     }
 
-    for uv in uvs.chunks_mut(2) {
-        uv[1] = 1.0 - uv[1];
-    }
-
-    let vao = VertexArray::new();
-
-    let vertex_buffer = ArrayBuffer::new();
-    vertex_buffer.bind();
-    ArrayBuffer::buffer_data(&vertices);
-    ArrayBuffer::unbind();
-
-    let element_buffer = ElementArrayBuffer::new();
-    element_buffer.bind();
-    ElementArrayBuffer::buffer_data(&indices);
-    ElementArrayBuffer::unbind();
-
-    let normal_buffer = ArrayBuffer::new();
-    normal_buffer.bind();
-    ArrayBuffer::buffer_data(&normals);
-    ArrayBuffer::unbind();
-
-    let uv_buffer = ArrayBuffer::new();
-    uv_buffer.bind();
-    ArrayBuffer::buffer_data(&uvs);
-    ArrayBuffer::unbind();
-
-    let material = models[0].mesh.material_id.map(|id| materials[id].clone());
-
-    let model_buffer = ModelBuffer::new(
-        vao,
-        vertex_buffer,
-        element_buffer,
-        normal_buffer,
-        uv_buffer,
-        indices.len(),
-        material,
-    );
-
-    Ok(model_buffer)
+    Ok(buffers)
 }

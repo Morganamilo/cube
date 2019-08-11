@@ -22,9 +22,10 @@ void main() {
     // Output color = color of the texture at the specified UV
     //color = texture( TextureSampler, UV ).rgb;
 
-    vec3 lightColor = vec3(1.0, 1.0, 1.0);
+    //vec3 lightColor = vec3(1.0, 1.0, 1.0);
+    vec3 lightColor = vec3(0.2, 0.2, 0.2);
     vec3 lightPos = vec3(0.0, -2.0, 2.0);
-    vec3 viewPos = vec3(1.0);
+    vec3 viewPos = vec3(0.0);
 
     // ambient
     vec3 ambient = lightColor * ambient;
@@ -43,5 +44,5 @@ void main() {
 
     vec3 result = ambient + diffuse + specular;
     color = vec4(result, 1.0);
-    //color = color * vec4(texture( TextureSampler, UV).rgb, 1.0);
+    color = color * vec4(texture( TextureSampler, UV).rgb, 1.0);
 }
