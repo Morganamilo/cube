@@ -14,10 +14,10 @@ use std::cell::RefCell;
 use std::ffi::{c_void, CString};
 
 pub trait WorldObject {
-    fn on_render(&mut self, renderer: &Renderer) {}
-    fn on_tick(&mut self, event_pump: &EventPump, renderer: &Renderer) {}
-    fn on_add(&mut self, renderer: &Renderer) {}
-    fn on_event(&mut self, event: &Event) {}
+    fn on_render(&mut self, _renderer: &Renderer) {}
+    fn on_tick(&mut self, _event_pump: &EventPump, _renderer: &Renderer) {}
+    fn on_add(&mut self, _renderer: &Renderer) {}
+    fn on_event(&mut self, _event: &Event) {}
 }
 
 pub struct Renderer {
@@ -54,8 +54,7 @@ impl Renderer {
         )
         .unwrap();
 
-        let program = Program::from_shaders(&[vert_shader, frag_shader]).unwrap();
-        program
+        Program::from_shaders(&[vert_shader, frag_shader]).unwrap()
     }
 
     pub fn new() -> Renderer {
@@ -71,11 +70,11 @@ impl Renderer {
             .unwrap();
 
         gl::load_with(|s| video.gl_get_proc_address(s) as *const c_void);
-        let mut canvas = window.into_canvas().present_vsync().build().unwrap();
+        let canvas = window.into_canvas().present_vsync().build().unwrap();
         let gl_attr = video.gl_attr();
         Self::configure_gl(&gl_attr);
 
-        let mut viewport = Viewport::for_window(1600, 900);
+        let viewport = Viewport::for_window(1600, 900);
         viewport.use_viewport();
 
         let render_objects = Vec::new();
@@ -125,7 +124,6 @@ impl Renderer {
 
     pub fn main_loop(&mut self) {
         let mut event_pump = self.sdl.event_pump().unwrap();
-        let mut i = 0.0;
 
         'running: loop {
             for event in event_pump.poll_iter() {
@@ -147,11 +145,11 @@ impl Renderer {
 
             self.tick(&event_pump);
 
-            let mut color_buffer = ColorBuffer::from_color(Vector3::new(0.5, 0.0, 0.5));
+            let color_buffer = ColorBuffer::from_color(Vector3::new(0.5, 0.0, 0.5));
             color_buffer.use_color_buffer();
             color_buffer.clear();
 
-            let mut i = 0.8;
+            let i = 0.8;
             let pos = self.camera.transform.pos;
             self.program.set_3f("lightColor", [i, i, i]);
             self.program.set_3f("lightPos", [10.0, -10.0, 10.0]);
@@ -163,9 +161,6 @@ impl Renderer {
             self.render();
             self.canvas.present();
             //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-
-            i += 0.01;
-            i %= 1.0;
         }
     }
 }

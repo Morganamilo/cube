@@ -1,4 +1,3 @@
-
 const FLU: usize = 0;
 const FU: usize = 1;
 const FRU: usize = 2;
@@ -46,7 +45,7 @@ impl Layout {
     }
 
     pub fn turn_up(&mut self) {
-        let c = self.layout.clone();
+        let c = self.layout;
         let l = &mut self.layout;
 
         l[BLU] = c[FLU];
@@ -59,11 +58,11 @@ impl Layout {
         l[FU] = c[RU];
         l[LU] = c[FU];
 
-        for piece in &FRONT {}
+        for _piece in &FRONT {}
     }
 
     pub fn turn_front(&mut self) {
-        let c = self.layout.clone();
+        let c = self.layout;
         let l = &mut self.layout;
 
         l[FLU] = c[FLD];

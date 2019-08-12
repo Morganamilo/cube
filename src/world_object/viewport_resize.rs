@@ -8,11 +8,11 @@ pub struct ViewportResize {
 }
 
 impl WorldObject for ViewportResize {
-    fn on_add(&mut self, renderer: &Renderer) {
+    fn on_add(&mut self, _renderer: &Renderer) {
         self.viewport.use_viewport();
     }
 
-    fn on_event(&mut self, evemt: &Event) {}
+    fn on_event(&mut self, _evemt: &Event) {}
 }
 
 impl ViewportResize {

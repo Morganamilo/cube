@@ -58,7 +58,7 @@ impl Texture {
 impl Drop for Texture {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteTextures(1, &mut self.0);
+            gl::DeleteTextures(1, &self.0);
         }
     }
 }

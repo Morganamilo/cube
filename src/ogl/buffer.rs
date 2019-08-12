@@ -1,7 +1,7 @@
-use crate::ogl::normal::Normal;
+use crate::ogl::normal;
 use crate::ogl::render::Renderer;
-use crate::ogl::uv::UV;
-use crate::ogl::vertex::Vertex;
+use crate::ogl::uv;
+use crate::ogl::vertex;
 
 use gl::types::*;
 use std::marker::PhantomData;
@@ -47,15 +47,15 @@ impl ModelBuffer {
     fn attrib_pointer(&self) {
         self.vao.bind();
         self.vertices.bind();
-        Vertex::<f32>::attrib_pointer();
+        vertex::attrib_pointer::<f32>();
         ArrayBuffer::unbind();
 
         self.normals.bind();
-        Normal::<f32>::attrib_pointer();
+        normal::attrib_pointer::<f32>();
         ArrayBuffer::unbind();
 
         self.uvs.bind();
-        UV::<f32>::attrib_pointer();
+        uv::attrib_pointer::<f32>();
         ArrayBuffer::unbind();
         VertexArray::unbind();
     }
@@ -138,7 +138,7 @@ impl<B: BufferType> Buffer<B> {
 impl<B: BufferType> Drop for Buffer<B> {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteBuffers(1, &mut self.0);
+            gl::DeleteBuffers(1, &self.0);
         }
     }
 }
@@ -171,7 +171,7 @@ impl VertexArray {
 impl Drop for VertexArray {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteVertexArrays(1, &mut self.0);
+            gl::DeleteVertexArrays(1, &self.0);
         }
     }
 }

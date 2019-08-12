@@ -1,31 +1,21 @@
 use crate::components::transform::Transform;
 use crate::ogl::buffer::ModelBuffer;
-use crate::ogl::buffer::{ArrayBuffer, ElementArrayBuffer, VertexArray};
-use crate::ogl::color_buffer::ColorBuffer;
-use crate::ogl::program::Program;
+
 use crate::ogl::render::Renderer;
 use crate::ogl::render::WorldObject;
 use crate::ogl::resources::{Models, ResourceManager, Textures};
-use crate::ogl::shader::Shader;
+
 use crate::ogl::texture::Texture;
-use crate::ogl::uv::UV;
-use crate::ogl::vertex::Vertex;
-use crate::ogl::viewport::Viewport;
+
 use crate::components::layout::Layout;
 
-use gl::types::*;
-use nalgebra::{Matrix4, Point3, Rotation3, UnitQuaternion, Vector3};
-use sdl2::event::{Event, WindowEvent};
-use sdl2::keyboard::Keycode;
+use nalgebra::{Rotation3, Vector3};
+
 use sdl2::keyboard::Scancode;
-use sdl2::video::gl_attr::GLAttr;
-use sdl2::video::GLProfile::Core;
+
 use sdl2::EventPump;
-use std::ffi::{c_void, CString};
-use std::ops::Range;
-use std::path::Path;
+
 use std::rc::Rc;
-use std::time::Duration;
 
 struct Turn {
     pieces: Vec<usize>,
@@ -41,12 +31,9 @@ struct Piece {
 
 impl Piece {
     fn new(model: &'static [usize]) -> Piece {
-        let mut transform = Transform::default();
+        let transform = Transform::default();
 
-        Piece {
-            transform,
-            model: model,
-        }
+        Piece { transform, model }
     }
 }
 
@@ -73,7 +60,7 @@ impl WorldObject for Cube {
         Texture::unbind();
     }
 
-    fn on_tick(&mut self, event_pump: &EventPump, renderer: &Renderer) {
+    fn on_tick(&mut self, event_pump: &EventPump, _renderer: &Renderer) {
         let kb = &event_pump.keyboard_state();
         if kb.is_scancode_pressed(Scancode::W) {
             self.transform.translate(Vector3::z() * 0.1);
@@ -160,7 +147,7 @@ impl Cube {
         let spot_tex = manager.load_texture(Textures::Spot).unwrap();
 
         use crate::components::piece::*;
-        let pieces = [Piece::new(&[]); 26];
+        let _pieces = [Piece::new(&[]); 26];
         let pieces = [
             //white layer
             Piece::new(&BOW),
@@ -206,7 +193,7 @@ impl Cube {
         }
     }
 
-    pub fn set_turn(&mut self, t: Turn) {
+    fn set_turn(&mut self, t: Turn) {
         self.turn.get_or_insert(t);
     }
 

@@ -83,7 +83,7 @@ impl Transform {
         self.rot = UnitQuaternion::face_towards(&dir, &up);
     }
 
-    pub fn look_at2(&mut self, p: Vector3<f32>) {
+    pub fn look_at2(&mut self, _p: Vector3<f32>) {
         if let Some(rot) = UnitQuaternion::rotation_between(&self.forward(), &self.pos.coords) {
             self.rot = rot * self.rot;
         }
@@ -97,7 +97,7 @@ impl Transform {
     }
 
     pub fn model(&self) -> Matrix4<f32> {
-        let mut model = Matrix4::identity();
+        let model = Matrix4::identity();
 
         Matrix4::new_translation(&self.pos.coords)
             * Matrix4::from(self.rot)
