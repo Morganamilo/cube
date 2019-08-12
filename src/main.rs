@@ -1,7 +1,12 @@
+#[allow(dead_code)]
 mod components;
+#[allow(dead_code)]
 mod error;
+#[allow(dead_code)]
 mod ogl;
+#[allow(dead_code)]
 mod util;
+#[allow(dead_code)]
 mod world_object;
 
 use crate::ogl::render::Renderer;

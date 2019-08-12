@@ -1,25 +1,17 @@
-use gl::types::*;
-
-use crate::components::transform::Transform;
 use crate::ogl::camera::Camera;
 use crate::ogl::color_buffer::ColorBuffer;
 use crate::ogl::program::Program;
 use crate::ogl::shader::Shader;
 use crate::ogl::viewport::Viewport;
 
-use nalgebra::{Matrix4, Point3, Rotation3, UnitQuaternion, Vector3};
+use nalgebra::{Matrix4, Vector3};
 use sdl2::event::{Event, WindowEvent};
-use sdl2::keyboard::Keycode;
-use sdl2::keyboard::Scancode;
 use sdl2::render::WindowCanvas;
 use sdl2::video::gl_attr::GLAttr;
-use sdl2::video::GLProfile::Core;
 use sdl2::EventPump;
 use sdl2::Sdl;
 use std::cell::RefCell;
 use std::ffi::{c_void, CString};
-use std::path::Path;
-use std::time::Duration;
 
 pub trait WorldObject {
     fn on_render(&mut self, renderer: &Renderer) {}
@@ -87,7 +79,9 @@ impl Renderer {
         viewport.use_viewport();
 
         let render_objects = Vec::new();
-        let camera = Camera::default();
+        let mut camera = Camera::default();
+        camera.transform.translate(Vector3::new(10.0, 0.0, 10.0));
+        camera.transform.look_at(Vector3::new(0.0, 0.0, 0.0));
 
         let program = Self::init_program();
         program.use_program();
@@ -160,7 +154,7 @@ impl Renderer {
             let mut i = 0.8;
             let pos = self.camera.transform.pos;
             self.program.set_3f("lightColor", [i, i, i]);
-            self.program.set_3f("lightPos", [0.0, -10.0, -0.0]);
+            self.program.set_3f("lightPos", [10.0, -10.0, 10.0]);
             self.program.set_3f("viewPos", [pos.x, pos.y, pos.z]);
             self.program.set_mat4("view", self.camera.transform.view());
             self.program

@@ -11,6 +11,7 @@ use crate::ogl::texture::Texture;
 use crate::ogl::uv::UV;
 use crate::ogl::vertex::Vertex;
 use crate::ogl::viewport::Viewport;
+use crate::components::layout::Layout;
 
 use gl::types::*;
 use nalgebra::{Matrix4, Point3, Rotation3, UnitQuaternion, Vector3};
@@ -21,43 +22,18 @@ use sdl2::video::gl_attr::GLAttr;
 use sdl2::video::GLProfile::Core;
 use sdl2::EventPump;
 use std::ffi::{c_void, CString};
+use std::ops::Range;
 use std::path::Path;
 use std::rc::Rc;
 use std::time::Duration;
 
-//corners
-const BRW: [usize; 4] = [26, 16, 47, 73];
-const BOW: [usize; 4] = [28, 31, 18, 1];
-const BOY: [usize; 4] = [21, 34, 5, 67];
-const BRY: [usize; 4] = [23, 54, 3, 72];
-const GRY: [usize; 4] = [39, 52, 10, 71];
-const GRW: [usize; 4] = [46, 49, 13, 70];
-const GOW: [usize; 4] = [44, 29, 11, 69];
-const GOY: [usize; 4] = [41, 36, 8, 68];
+struct Turn {
+    pieces: Vec<usize>,
+    rot: Rotation3<f32>,
+    steps: usize,
+}
 
-//edges
-const BY: [usize; 3] = [22, 4, 56];
-const BR: [usize; 3] = [25, 55, 60];
-const BW: [usize; 3] = [27, 17, 57];
-const BO: [usize; 3] = [20, 32, 0];
-const GO: [usize; 3] = [43, 37, 59];
-const GY: [usize; 3] = [40, 9, 75];
-const GR: [usize; 3] = [38, 50, 74];
-const GW: [usize; 3] = [45, 12, 58];
-const OW: [usize; 3] = [19, 30, 64];
-const OY: [usize; 3] = [35, 7, 65];
-const RY: [usize; 3] = [53, 2, 76];
-const RW: [usize; 3] = [48, 14, 63];
-
-//centers
-const W: [usize; 2] = [15, 79];
-const O: [usize; 2] = [33, 77];
-const Y: [usize; 2] = [6, 66];
-const R: [usize; 2] = [51, 61];
-const B: [usize; 2] = [24, 78];
-const G: [usize; 2] = [42, 62];
-
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct Piece {
     transform: Transform,
     model: &'static [usize],
@@ -65,8 +41,10 @@ struct Piece {
 
 impl Piece {
     fn new(model: &'static [usize]) -> Piece {
+        let mut transform = Transform::default();
+
         Piece {
-            transform: Transform::default(),
+            transform,
             model: model,
         }
     }
@@ -75,8 +53,10 @@ impl Piece {
 pub struct Cube {
     buffer: Rc<Vec<ModelBuffer>>,
     texture: Rc<Texture>,
-    transform: Transform,
     pieces: [Piece; 26],
+    turn: Option<Turn>,
+    transform: Transform,
+    layout: Layout,
 }
 
 impl WorldObject for Cube {
@@ -84,8 +64,7 @@ impl WorldObject for Cube {
         self.texture.bind();
 
         for peiece in &self.pieces {
-            renderer.set_model(peiece.transform.model());
-            println!("{:?}", peiece.transform);
+            renderer.set_model(self.transform.model() * peiece.transform.model());
             for &model in peiece.model {
                 self.buffer[model].draw(renderer);
             }
@@ -97,109 +76,80 @@ impl WorldObject for Cube {
     fn on_tick(&mut self, event_pump: &EventPump, renderer: &Renderer) {
         let kb = &event_pump.keyboard_state();
         if kb.is_scancode_pressed(Scancode::W) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_translate(Vector3::z() * 0.1);
-            }
+            self.transform.translate(Vector3::z() * 0.1);
         }
         if kb.is_scancode_pressed(Scancode::A) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_translate(-Vector3::x() * 0.1);
-            }
+            self.transform.translate(-Vector3::x() * 0.1);
         }
         if kb.is_scancode_pressed(Scancode::D) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_translate(Vector3::x() * 0.1);
-            }
+            self.transform.translate(Vector3::x() * 0.1);
         }
         if kb.is_scancode_pressed(Scancode::S) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_translate(-Vector3::z() * 0.1);
-            }
+            self.transform.translate(-Vector3::z() * 0.1);
         }
         if kb.is_scancode_pressed(Scancode::Left) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_rotate_euler(Rotation3::from_euler_angles(
-                    0.0,
-                    f32::to_radians(-4.0),
-                    0.0,
-                ))
-            }
+            self.transform.rotate_euler(Rotation3::from_euler_angles(
+                0.0,
+                f32::to_radians(-4.0),
+                0.0,
+            ))
         }
         if kb.is_scancode_pressed(Scancode::Right) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_rotate_euler(Rotation3::from_euler_angles(
-                    0.0,
-                    f32::to_radians(4.0),
-                    0.0,
-                ))
-            }
+            self.transform.rotate_euler(Rotation3::from_euler_angles(
+                0.0,
+                f32::to_radians(4.0),
+                0.0,
+            ))
         }
         if kb.is_scancode_pressed(Scancode::Q) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_rotate_euler(Rotation3::from_euler_angles(
-                    0.0,
-                    0.0,
-                    f32::to_radians(-4.0),
-                ))
-            }
+            self.transform.rotate_euler(Rotation3::from_euler_angles(
+                0.0,
+                0.0,
+                f32::to_radians(-4.0),
+            ))
         }
         if kb.is_scancode_pressed(Scancode::E) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_rotate_euler(Rotation3::from_euler_angles(
-                    0.0,
-                    0.0,
-                    f32::to_radians(4.0),
-                ))
-            }
+            self.transform.rotate_euler(Rotation3::from_euler_angles(
+                0.0,
+                0.0,
+                f32::to_radians(4.0),
+            ))
         }
         if kb.is_scancode_pressed(Scancode::Up) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_rotate_euler(Rotation3::from_euler_angles(
-                    f32::to_radians(-4.0),
-                    0.0,
-                    0.0,
-                ))
-            }
+            self.transform.rotate_euler(Rotation3::from_euler_angles(
+                f32::to_radians(-4.0),
+                0.0,
+                0.0,
+            ))
         }
         if kb.is_scancode_pressed(Scancode::Down) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.relative_rotate_euler(Rotation3::from_euler_angles(
-                    f32::to_radians(4.0),
-                    0.0,
-                    0.0,
-                ))
-            }
+            self.transform.rotate_euler(Rotation3::from_euler_angles(
+                f32::to_radians(4.0),
+                0.0,
+                0.0,
+            ))
         }
         if kb.is_scancode_pressed(Scancode::Equals) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.scale += Vector3::repeat(0.02);
-            }
+            self.transform.scale += Vector3::repeat(0.02);
         }
         if kb.is_scancode_pressed(Scancode::Minus) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.scale -= Vector3::repeat(0.02);
-            }
+            self.transform.scale -= Vector3::repeat(0.02);
         }
         if kb.is_scancode_pressed(Scancode::Space) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.look_at(Vector3::zeros());
-            }
+            self.transform.look_at(Vector3::zeros());
         }
         if kb.is_scancode_pressed(Scancode::U) {
-            for transform in self.pieces.iter_mut().map(|p| &mut p.transform) {
-                transform.look_at(self.transform.pos.coords - Vector3::y());
-            }
+            self.transform
+                .look_at(self.transform.pos.coords - Vector3::y());
         }
         if kb.is_scancode_pressed(Scancode::T) {
-            for transform in self.pieces[17..=25].iter_mut().map(|p| &mut p.transform) {
- transform.relative_rotate_euler(Rotation3::from_euler_angles(
-                    0.0,
-                    0.0,
-                    f32::to_radians(-4.0),
-                ))
-            }
+            self.front();
+        }
+        if kb.is_scancode_pressed(Scancode::Y) {
+            self.up();
         }
 
+        self.turn();
     }
 }
 
@@ -208,14 +158,9 @@ impl Cube {
         let spot_mod = manager.load_model(Models::Cube).unwrap();
         //let spot_mod = manager.load_model(Models::Spot).unwrap();
         let spot_tex = manager.load_texture(Textures::Spot).unwrap();
-        let mut transform = Transform::default();
-        transform.translate(Vector3::z() * 2.0);
-        transform.rot_offset = UnitQuaternion::from(Rotation3::from_euler_angles(
-            f32::to_radians(180.0),
-            f32::to_radians(0.0),
-            f32::to_radians(0.0),
-        ));
 
+        use crate::components::piece::*;
+        let pieces = [Piece::new(&[]); 26];
         let pieces = [
             //white layer
             Piece::new(&BOW),
@@ -248,11 +193,70 @@ impl Cube {
             Piece::new(&GRY),
         ];
 
+        let layout = Layout::new();
+        let transform = Transform::default();
+
         Cube {
             buffer: spot_mod,
             texture: spot_tex,
-            transform,
             pieces,
+            turn: None,
+            transform,
+            layout,
         }
+    }
+
+    pub fn set_turn(&mut self, t: Turn) {
+        self.turn.get_or_insert(t);
+    }
+
+    pub fn turn(&mut self) {
+        let turn = match &mut self.turn {
+            Some(turn) => turn,
+            None => return,
+        };
+
+        for &piece in &turn.pieces {
+            let piece = &mut self.pieces[piece];
+            piece.transform.rotate_euler(turn.rot);
+        }
+
+        turn.steps -= 1;
+
+        if turn.steps == 0 {
+            self.turn = None;
+        }
+    }
+
+    pub fn front(&mut self) {
+        if self.turn.is_some() {
+            return;
+        }
+
+        let rot = Rotation3::from_euler_angles(0.0, 0.0, f32::to_radians(-90.0 / 20.0));
+        let turn = Turn {
+            pieces: Vec::from(&self.layout.front()[..]),
+            rot,
+            steps: 20,
+        };
+
+        self.layout.turn_front();
+        self.set_turn(turn);
+    }
+
+    pub fn up(&mut self) {
+        if self.turn.is_some() {
+            return;
+        }
+
+        let rot = Rotation3::from_euler_angles(0.0, f32::to_radians(-90.0 / 20.0), 0.0);
+        let turn = Turn {
+            pieces: Vec::from(&self.layout.up()[..]),
+            rot,
+            steps: 20,
+        };
+
+        self.layout.turn_up();
+        self.set_turn(turn);
     }
 }
