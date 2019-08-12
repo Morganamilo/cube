@@ -12,3 +12,6 @@ gl = "0.13.0"
 nalgebra = "0.18.0"
 tobj = "0.1.8"
 image = "0.22.1"
+
+[profile.release]
+lto = true
