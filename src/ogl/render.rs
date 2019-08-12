@@ -79,8 +79,7 @@ impl Renderer {
 
         let render_objects = Vec::new();
         let mut camera = Camera::default();
-        camera.transform.translate(Vector3::new(10.0, 0.0, 10.0));
-        camera.transform.look_at(Vector3::new(0.0, 0.0, 0.0));
+        camera.transform.translate(Vector3::new(0.0, 0.0, -14.0));
 
         let program = Self::init_program();
         program.use_program();
@@ -152,7 +151,7 @@ impl Renderer {
             let i = 0.8;
             let pos = self.camera.transform.pos;
             self.program.set_3f("lightColor", [i, i, i]);
-            self.program.set_3f("lightPos", [10.0, -10.0, 10.0]);
+            self.program.set_3f("lightPos", [0.0, -10.0, -10.0]);
             self.program.set_3f("viewPos", [pos.x, pos.y, pos.z]);
             self.program.set_mat4("view", self.camera.transform.view());
             self.program
