@@ -1,20 +1,16 @@
+use crate::components::layout;
+use crate::components::layout::Face;
+use crate::components::layout::Layout;
 use crate::components::transform::Transform;
 use crate::ogl::buffer::ModelBuffer;
-
 use crate::ogl::render::Renderer;
 use crate::ogl::render::WorldObject;
 use crate::ogl::resources::{Models, ResourceManager, Textures};
-
 use crate::ogl::texture::Texture;
 
-use crate::components::layout::Layout;
-
-use nalgebra::{Rotation3, Vector3};
-
+use nalgebra::{Rotation3, UnitQuaternion, Vector3};
 use sdl2::keyboard::Scancode;
-
 use sdl2::EventPump;
-
 use std::rc::Rc;
 
 struct Turn {
@@ -40,7 +36,7 @@ impl Piece {
 pub struct Cube {
     buffer: Rc<Vec<ModelBuffer>>,
     texture: Rc<Texture>,
-    pieces: [Piece; 26],
+    pieces: [Piece; 27],
     turn: Option<Turn>,
     transform: Transform,
     layout: Layout,
@@ -129,14 +125,40 @@ impl WorldObject for Cube {
             self.transform
                 .look_at(self.transform.pos.coords - Vector3::y());
         }
-        if kb.is_scancode_pressed(Scancode::T) {
-            self.front();
+        if kb.is_scancode_pressed(Scancode::Num1) {
+            self.left();
         }
-        if kb.is_scancode_pressed(Scancode::Y) {
+        if kb.is_scancode_pressed(Scancode::Num2) {
+            self.right();
+        }
+        if kb.is_scancode_pressed(Scancode::Num3) {
             self.up();
         }
+        if kb.is_scancode_pressed(Scancode::Num4) {
+            self.down();
+        }
+        if kb.is_scancode_pressed(Scancode::Num5) {
+            self.front();
+        }
+        if kb.is_scancode_pressed(Scancode::Num6) {
+            self.back();
+        }
+        if kb.is_scancode_pressed(Scancode::X) {
+            self.x();
+        }
 
-        self.turn();
+        if kb.is_scancode_pressed(Scancode::V) {
+            for piece in &mut self.pieces[0..=9] {
+                piece.transform.translate(Vector3::z() * 0.1);
+            }
+        }
+        if kb.is_scancode_pressed(Scancode::M) {
+            self.middle();
+        }
+
+        self.tick_turn();
+
+        println!("solved {}", self.layout.solved());
     }
 }
 
@@ -147,7 +169,7 @@ impl Cube {
         let spot_tex = manager.load_texture(Textures::Spot).unwrap();
 
         use crate::components::piece::*;
-        let _pieces = [Piece::new(&[]); 26];
+        let _pieces = [Piece::new(&[]); 27];
         let pieces = [
             //white layer
             Piece::new(&BOW),
@@ -164,6 +186,7 @@ impl Cube {
             Piece::new(&B),
             Piece::new(&BR),
             Piece::new(&O),
+            Piece::new(&C),
             Piece::new(&R),
             Piece::new(&GO),
             Piece::new(&G),
@@ -181,7 +204,12 @@ impl Cube {
         ];
 
         let layout = Layout::new();
-        let transform = Transform::default();
+        let mut transform = Transform::default();
+        transform.rot_offset = UnitQuaternion::from(Rotation3::from_euler_angles(
+            f32::to_radians(180.0),
+            0.0,
+            0.0,
+        ));
 
         Cube {
             buffer: spot_mod,
@@ -193,11 +221,7 @@ impl Cube {
         }
     }
 
-    fn set_turn(&mut self, t: Turn) {
-        self.turn.get_or_insert(t);
-    }
-
-    pub fn turn(&mut self) {
+    fn tick_turn(&mut self) {
         let turn = match &mut self.turn {
             Some(turn) => turn,
             None => return,
@@ -215,35 +239,63 @@ impl Cube {
         }
     }
 
-    pub fn front(&mut self) {
+    fn turn(&mut self, dir: Vector3<f32>, faces: &[&Face], speed: usize) {
+        assert!(speed <= 100);
         if self.turn.is_some() {
             return;
         }
 
-        let rot = Rotation3::from_euler_angles(0.0, 0.0, f32::to_radians(-90.0 / 20.0));
-        let turn = Turn {
-            pieces: Vec::from(&self.layout.front()[..]),
-            rot,
-            steps: 20,
-        };
+        let mut pieces = Vec::new();
+        for face in faces.iter() {
+            self.layout.turn(face);
+            pieces.extend(&self.layout.layer(face));
+        }
 
-        self.layout.turn_front();
-        self.set_turn(turn);
+        let steps = 101 - speed;
+        let dir = dir * f32::to_radians(90.0) / steps as f32;
+        let rot = Rotation3::from_euler_angles(dir.x, dir.y, dir.z);
+        let turn = Turn { pieces, rot, steps };
+
+        self.turn = Some(turn);
+    }
+
+    pub fn front(&mut self) {
+        self.turn(-Vector3::z(), &[&layout::FRONT], 80);
+    }
+
+    pub fn back(&mut self) {
+        self.turn(Vector3::z(), &[&layout::BACK], 80);
     }
 
     pub fn up(&mut self) {
-        if self.turn.is_some() {
-            return;
-        }
+        self.turn(-Vector3::y(), &[&layout::UP], 80);
+    }
 
-        let rot = Rotation3::from_euler_angles(0.0, f32::to_radians(-90.0 / 20.0), 0.0);
-        let turn = Turn {
-            pieces: Vec::from(&self.layout.up()[..]),
-            rot,
-            steps: 20,
-        };
+    pub fn down(&mut self) {
+        self.turn(Vector3::y(), &[&layout::DOWN], 80);
+    }
 
-        self.layout.turn_up();
-        self.set_turn(turn);
+    pub fn left(&mut self) {
+        self.turn(Vector3::x(), &[&layout::LEFT], 80);
+    }
+
+    pub fn right(&mut self) {
+        self.turn(-Vector3::x(), &[&layout::RIGHT], 80);
+    }
+
+    pub fn middle(&mut self) {
+        self.turn(Vector3::x(), &[&layout::MIDDLE], 80);
+    }
+
+    pub fn x(&mut self) {
+        self.turn(
+            -Vector3::x(),
+            &[
+                &layout::MIDDLE.reverse(),
+                &layout::LEFT.reverse(),
+                &layout::RIGHT,
+            ],
+            80,
+        );
     }
 }

@@ -23,7 +23,7 @@ uniform float shininess;
 void main() {
     // ambient
     vec3 ambient = lightColor * ambient;
-    ambient = ambient / 4.0;
+    ambient = ambient / 3.0;
 
     // diffuse
     vec3 norm = normalize(normal);

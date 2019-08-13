@@ -80,7 +80,6 @@ fn load_obj<P: AsRef<Path>>(p: P) -> Result<Vec<ModelBuffer>, tobj::LoadError> {
     let mut buffers = Vec::with_capacity(models.len());
 
     for model in models {
-        println!("{}", model.name);
         let mesh = &model.mesh;
 
         let vao = VertexArray::new();

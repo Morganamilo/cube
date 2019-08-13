@@ -29,3 +29,5 @@ pub const Y: [usize; 2] = [6, 66];
 pub const R: [usize; 2] = [51, 61];
 pub const B: [usize; 2] = [24, 78];
 pub const G: [usize; 2] = [42, 62];
+
+pub const C: [usize; 1] = [80];

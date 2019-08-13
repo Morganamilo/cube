@@ -12,31 +12,96 @@ const LU: usize = 9;
 const U: usize = 10;
 const RU: usize = 11;
 const L: usize = 12;
-const R: usize = 13;
-const LD: usize = 14;
-const D: usize = 15;
-const RD: usize = 16;
+const C: usize = 13;
+const R: usize = 14;
+const LD: usize = 15;
+const D: usize = 16;
+const RD: usize = 17;
 
-const BLU: usize = 17;
-const BU: usize = 18;
-const BRU: usize = 19;
-const BL: usize = 20;
-const B: usize = 21;
-const BR: usize = 22;
-const BLD: usize = 23;
-const BD: usize = 24;
-const BRD: usize = 25;
+const BLU: usize = 18;
+const BU: usize = 19;
+const BRU: usize = 20;
+const BL: usize = 21;
+const B: usize = 22;
+const BR: usize = 23;
+const BLD: usize = 24;
+const BD: usize = 25;
+const BRD: usize = 26;
 
-const LAYOUT: [usize; 26] = [
-    FLU, FU, FRU, FL, F, FR, FLD, FD, FRD, LU, U, RU, L, R, LD, D, RD, BLU, BU, BRU, BL, B, BR,
+static LAYOUT: [usize; 27] = [
+    FLU, FU, FRU, FL, F, FR, FLD, FD, FRD, LU, U, RU, L, C, R, LD, D, RD, BLU, BU, BRU, BL, B, BR,
     BLD, BD, BRD,
 ];
 
-const FRONT: [usize; 9] = [FLU, FU, FRU, FL, F, FR, FLD, FD, FRD];
+pub static FRONT: Face = Face {
+    corners: [FLU, FLD, FRD, FRU],
+    edges: [FU, FL, FD, FR],
+    center: F,
+};
 
-#[derive(Debug)]
+pub static BACK: Face = Face {
+    corners: [BLU, BRU, BRD, BLD],
+    edges: [BU, BR, BD, BL],
+    center: B,
+};
+
+pub static UP: Face = Face {
+    corners: [BLU, FLU, FRU, BRU],
+    edges: [BU, LU, FU, RU],
+    center: U,
+};
+
+pub static DOWN: Face = Face {
+    corners: [BLD, BRD, FRD, FLD],
+    edges: [BD, RD, FD, LD],
+    center: D,
+};
+
+pub static LEFT: Face = Face {
+    corners: [BLU, BLD, FLD, FLU],
+    edges: [BL, LD, FL, LU],
+    center: L,
+};
+
+pub static RIGHT: Face = Face {
+    corners: [BRU, FRU, FRD, BRD],
+    edges: [BR, RU, FR, RD],
+    center: R,
+};
+
+pub static MIDDLE: Face = Face {
+    corners: [FU, BU, BD, FD],
+    edges: [F, U, B, D],
+    center: C,
+};
+
+pub struct Face {
+    corners: [usize; 4],
+    edges: [usize; 4],
+    center: usize,
+}
+
+impl Face {
+    fn layer(&self) -> [usize; 9] {
+        let c = &self.corners;
+        let e = &self.edges;
+        [c[0], c[1], c[2], c[3], e[0], e[1], e[2], e[3], self.center]
+    }
+
+    pub fn reverse(&self) -> Self {
+        let c = &self.corners;
+        let e = &self.edges;
+
+        Face {
+            corners: [c[0], c[3], c[2], c[1]],
+            edges: [e[0], e[3], e[2], e[1]],
+            center: self.center,
+        }
+    }
+}
+
 pub struct Layout {
-    layout: [usize; 26],
+    layout: [usize; 27],
 }
 
 impl Layout {
@@ -44,51 +109,31 @@ impl Layout {
         Layout { layout: LAYOUT }
     }
 
-    pub fn turn_up(&mut self) {
-        let c = self.layout;
+    pub fn turn(&mut self, face: &Face) {
+        let cp = self.layout;
         let l = &mut self.layout;
 
-        l[BLU] = c[FLU];
-        l[BRU] = c[BLU];
-        l[FRU] = c[BRU];
-        l[FLU] = c[FRU];
+        let c = &face.corners;
+        let e = &face.edges;
 
-        l[BU] = c[LU];
-        l[RU] = c[BU];
-        l[FU] = c[RU];
-        l[LU] = c[FU];
-
-        for _piece in &FRONT {}
+        for piece in 0..4 {
+            l[c[piece]] = cp[c[(piece + 1) % c.len()]];
+            l[e[piece]] = cp[e[(piece + 1) % e.len()]];
+        }
     }
 
-    pub fn turn_front(&mut self) {
-        let c = self.layout;
-        let l = &mut self.layout;
-
-        l[FLU] = c[FLD];
-        l[FRU] = c[FLU];
-        l[FRD] = c[FRU];
-        l[FLD] = c[FRD];
-
-        l[FU] = c[FL];
-        l[FR] = c[FU];
-        l[FD] = c[FR];
-        l[FL] = c[FD];
-    }
-
-    pub fn front(&self) -> [usize; 9] {
+    pub fn layer(&self, face: &Face) -> [usize; 9] {
+        let f = face.layer();
         let l = &self.layout;
 
-        [
-            l[FLU], l[FU], l[FRU], l[FL], l[F], l[FR], l[FLD], l[FD], l[FRD],
-        ]
+        let mut out = [0; 9];
+        for i in 0..out.len() {
+            out[i] = l[f[i]];
+        }
+        out
     }
 
-    pub fn up(&self) -> [usize; 9] {
-        let l = &self.layout;
-
-        [
-            l[BLU], l[BU], l[BRU], l[LU], l[U], l[RU], l[FLU], l[FU], l[FRU],
-        ]
+    pub fn solved(&self) -> bool {
+        self.layout == LAYOUT
     }
 }
