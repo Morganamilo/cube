@@ -28,7 +28,6 @@ struct Piece {
 impl Piece {
     fn new(model: &'static [usize]) -> Piece {
         let transform = Transform::default();
-
         Piece { transform, model }
     }
 }
@@ -57,6 +56,105 @@ impl WorldObject for Cube {
     }
 
     fn on_tick(&mut self, event_pump: &EventPump, _renderer: &Renderer) {
+        self.handle_input(event_pump);
+        self.tick_turn();
+        println!("solved {}", self.layout.solved());
+    }
+}
+
+impl Cube {
+    pub fn new(manager: &mut ResourceManager) -> Cube {
+        let spot_mod = manager.load_model(Models::Cube).unwrap();
+        //let spot_mod = manager.load_model(Models::Spot).unwrap();
+        let spot_tex = manager.load_texture(Textures::Spot).unwrap();
+
+        use crate::components::piece::*;
+        let _pieces = [Piece::new(&[]); 27];
+        let pieces = [
+            /*//white layer
+            Piece::new(&BOW),
+            Piece::new(&BW),
+            Piece::new(&BRW),
+            Piece::new(&OW),
+            Piece::new(&W),
+            Piece::new(&RW),
+            Piece::new(&GOW),
+            Piece::new(&GW),
+            Piece::new(&GRW),
+            //middle
+            Piece::new(&BO),
+            Piece::new(&B),
+            Piece::new(&BR),
+            Piece::new(&O),
+            Piece::new(&C),
+            Piece::new(&R),
+            Piece::new(&GO),
+            Piece::new(&G),
+            Piece::new(&GR),
+            //yelow layer
+            Piece::new(&BOY),
+            Piece::new(&BY),
+            Piece::new(&BRY),
+            Piece::new(&OY),
+            Piece::new(&Y),
+            Piece::new(&RY),
+            Piece::new(&GOY),
+            Piece::new(&GY),
+            Piece::new(&GRY),*/
+
+            // blue layer
+            Piece::new(&BOY),
+            Piece::new(&BY),
+            Piece::new(&BRY),
+            Piece::new(&BO),
+            Piece::new(&B),
+            Piece::new(&BR),
+            Piece::new(&BOW),
+            Piece::new(&BW),
+            Piece::new(&BRW),
+
+            // middle layer
+            Piece::new(&OY),
+            Piece::new(&Y),
+            Piece::new(&RY),
+            Piece::new(&O),
+            Piece::new(&C),
+            Piece::new(&R),
+            Piece::new(&OW),
+            Piece::new(&W),
+            Piece::new(&RW),
+
+            // green layer
+            Piece::new(&GOY),
+            Piece::new(&GY),
+            Piece::new(&GRY),
+            Piece::new(&GO),
+            Piece::new(&G),
+            Piece::new(&GR),
+            Piece::new(&GOW),
+            Piece::new(&GW),
+            Piece::new(&GRW),
+        ];
+
+        let layout = Layout::new();
+        let mut transform = Transform::default();
+        transform.rot_offset = UnitQuaternion::from(Rotation3::from_euler_angles(
+            f32::to_radians(-90.0),
+            0.0,
+            0.0,
+        ));
+
+        Cube {
+            buffer: spot_mod,
+            texture: spot_tex,
+            pieces,
+            turn: None,
+            transform,
+            layout,
+        }
+    }
+
+    fn handle_input(&mut self, event_pump: &EventPump) {
         let kb = &event_pump.keyboard_state();
         if kb.is_scancode_pressed(Scancode::W) {
             self.transform.translate(Vector3::z() * 0.1);
@@ -156,69 +254,10 @@ impl WorldObject for Cube {
             self.middle();
         }
 
-        self.tick_turn();
-
-        println!("solved {}", self.layout.solved());
-    }
-}
-
-impl Cube {
-    pub fn new(manager: &mut ResourceManager) -> Cube {
-        let spot_mod = manager.load_model(Models::Cube).unwrap();
-        //let spot_mod = manager.load_model(Models::Spot).unwrap();
-        let spot_tex = manager.load_texture(Textures::Spot).unwrap();
-
-        use crate::components::piece::*;
-        let _pieces = [Piece::new(&[]); 27];
-        let pieces = [
-            //white layer
-            Piece::new(&BOW),
-            Piece::new(&BW),
-            Piece::new(&BRW),
-            Piece::new(&OW),
-            Piece::new(&W),
-            Piece::new(&RW),
-            Piece::new(&GOW),
-            Piece::new(&GW),
-            Piece::new(&GRW),
-            //middle
-            Piece::new(&BO),
-            Piece::new(&B),
-            Piece::new(&BR),
-            Piece::new(&O),
-            Piece::new(&C),
-            Piece::new(&R),
-            Piece::new(&GO),
-            Piece::new(&G),
-            Piece::new(&GR),
-            //yelow layer
-            Piece::new(&BOY),
-            Piece::new(&BY),
-            Piece::new(&BRY),
-            Piece::new(&OY),
-            Piece::new(&Y),
-            Piece::new(&RY),
-            Piece::new(&GOY),
-            Piece::new(&GY),
-            Piece::new(&GRY),
-        ];
-
-        let layout = Layout::new();
-        let mut transform = Transform::default();
-        transform.rot_offset = UnitQuaternion::from(Rotation3::from_euler_angles(
-            f32::to_radians(180.0),
-            0.0,
-            0.0,
-        ));
-
-        Cube {
-            buffer: spot_mod,
-            texture: spot_tex,
-            pieces,
-            turn: None,
-            transform,
-            layout,
+        if kb.is_scancode_pressed(Scancode::Z) {
+            self.pieces[0].transform.translate(Vector3::y() * 0.01);
         }
+
     }
 
     fn tick_turn(&mut self) {
@@ -260,19 +299,19 @@ impl Cube {
     }
 
     pub fn front(&mut self) {
-        self.turn(-Vector3::z(), &[&layout::FRONT], 80);
+        self.turn(-Vector3::y(), &[&layout::FRONT], 80);
     }
 
     pub fn back(&mut self) {
-        self.turn(Vector3::z(), &[&layout::BACK], 80);
+        self.turn(Vector3::y(), &[&layout::BACK], 80);
     }
 
     pub fn up(&mut self) {
-        self.turn(-Vector3::y(), &[&layout::UP], 80);
+        self.turn(Vector3::z(), &[&layout::UP], 80);
     }
 
     pub fn down(&mut self) {
-        self.turn(Vector3::y(), &[&layout::DOWN], 80);
+        self.turn(-Vector3::z(), &[&layout::DOWN], 80);
     }
 
     pub fn left(&mut self) {

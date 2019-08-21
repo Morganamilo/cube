@@ -141,14 +141,14 @@ pub enum Rotate {
     Z,
 }
 
-pub struct Layout {
-    layout: [[Sticker; 9]; 6],
+pub struct Stickers {
+    stickers: [[Sticker; 9]; 6],
 }
 
-impl Layout {
+impl Stickers {
     pub const fn new() -> Self {
-        Layout {
-            layout: [
+        Stickers {
+            stickers: [
                 [Sticker::Yellow; 9],
                 [Sticker::White; 9],
                 [Sticker::Orange; 9],
@@ -160,7 +160,7 @@ impl Layout {
     }
 
     pub fn solved(&self) -> bool {
-        for face in &self.layout {
+        for face in &self.stickers {
             if !face.iter().skip(1).all(|&x| x == face[0]) {
                 return false;
             }
@@ -211,7 +211,7 @@ impl Layout {
 
     fn y(&mut self, rev: bool) {
         self.slice(Slice::Equator, !rev);
-        self.face(Face::Up, rev,);
+        self.face(Face::Up, rev);
         self.face(Face::Down, !rev);
     }
 
@@ -233,7 +233,7 @@ impl Layout {
             swap(&mut i1, &mut i2);
         }
 
-        let (l, r) = self.layout.split_at_mut(f2 as usize);
+        let (l, r) = self.stickers.split_at_mut(f2 as usize);
         let (l, r) = (&mut l[f1 as usize], &mut r[0]);
 
         for (&i, &j) in i1.iter().zip(i2) {
@@ -248,7 +248,7 @@ impl Layout {
     }
 
     fn swap_faces(&mut self, f1: Face, f2: Face) {
-        self.layout.swap(f1 as usize, f2 as usize);
+        self.stickers.swap(f1 as usize, f2 as usize);
     }
 
     fn swap_sides(&mut self, fface: Face, f1: Face, f2: Face) {
@@ -258,7 +258,7 @@ impl Layout {
     }
 
     fn rotate_face(&mut self, face: Face, rev: bool) {
-        let face = &mut self.layout[face as usize];
+        let face = &mut self.stickers[face as usize];
         if rev {
             for n in 0..7 {
                 face.swap(n, n + 2);
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn print() {
-        let mut l = Layout::new();
+        let mut l = Stickers::new();
 
         /*l.rotate(Face::Up, false);
         l.rotate(Face::Right, false);
@@ -331,7 +331,7 @@ mod tests {
         l.slice(Slice::Standing, false);
         println!("{}", l.solved());
 
-        let l = &l.layout;
+        let l = &l.stickers;
 
         for y in 0..3 {
             print!("        ");
