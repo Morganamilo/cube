@@ -2,7 +2,10 @@ use std::fmt;
 use std::mem::swap;
 use std::ops::Neg;
 
-static SOLVED: Layout = Layout::new();
+static SLICE_UP: [usize; 3] = [1, 8, 5];
+static SLICE_RIGHT: [usize; 3] = [7, 8, 3];
+static SLICE_DOWN: [usize; 3] = [5, 8, 1];
+static SLICE_LEFT: [usize; 3] = [3, 8, 7];
 
 #[derive(Debug, Copy, Clone)]
 enum Direction {
@@ -95,7 +98,49 @@ impl Face {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, Copy, Clone)]
+pub enum Slice {
+    Middle,
+    Equator,
+    Standing,
+}
+
+impl Slice {
+    fn intersect(self, face: Face) -> [usize; 3] {
+        match self {
+            Self::Equator => SLICE_RIGHT,
+            Self::Middle => match face {
+                Face::Front => SLICE_DOWN,
+                Face::Up => SLICE_DOWN,
+                Face::Back => SLICE_UP,
+                Face::Down => SLICE_UP,
+                _ => unreachable!(),
+            },
+            Self::Standing => match face {
+                Face::Up => SLICE_RIGHT,
+                Face::Left => SLICE_DOWN,
+                Face::Down => SLICE_LEFT,
+                Face::Right => SLICE_UP,
+                _ => unreachable!(),
+            },
+        }
+    }
+
+    fn surrounding(self) -> [Face; 4] {
+        match self {
+            Self::Middle => Face::Left.surrounding(),
+            Self::Equator => Face::Down.surrounding(),
+            Self::Standing => Face::Front.surrounding(),
+        }
+    }
+}
+
+pub enum Rotate {
+    X,
+    Y,
+    Z,
+}
+
 pub struct Layout {
     layout: [[Sticker; 9]; 6],
 }
@@ -104,140 +149,124 @@ impl Layout {
     pub const fn new() -> Self {
         Layout {
             layout: [
-                [Sticker::White; 9],
                 [Sticker::Yellow; 9],
-                [Sticker::Green; 9],
-                [Sticker::Blue; 9],
-                [Sticker::Red; 9],
+                [Sticker::White; 9],
                 [Sticker::Orange; 9],
+                [Sticker::Red; 9],
+                [Sticker::Blue; 9],
+                [Sticker::Green; 9],
             ],
         }
     }
 
     pub fn solved(&self) -> bool {
-        self == &SOLVED
+        for face in &self.layout {
+            if !face.iter().skip(1).all(|&x| x == face[0]) {
+                return false;
+            }
+        }
+        true
     }
 
-    pub fn rotate(&mut self, face: Face) {
-        self.rotate_face(face);
+    pub fn face(&mut self, face: Face, rev: bool) {
+        self.rotate_face(face, rev);
         let surrounding = face.surrounding();
-        for n in 0..3 {
-            self.swap_sides(face, surrounding[n], surrounding[n + 1]);
+        if rev {
+            for n in (0..3).rev() {
+                self.swap_sides(face, surrounding[n], surrounding[n + 1]);
+            }
+        } else {
+            for n in 0..3 {
+                self.swap_sides(face, surrounding[n], surrounding[n + 1]);
+            }
         }
     }
 
-    pub fn m(&mut self) {
-        self.swap_parts(Face::Front, &[1, 8, 5], Face::Up, &[1, 8, 5]);
-        self.swap_parts(Face::Up, &[1, 8, 5], Face::Back, &[5, 8, 1]);
-        self.swap_parts(Face::Back, &[5, 8, 1], Face::Down, &[1, 8, 5]);
-    }
-
-    pub fn e(&mut self) {
-        self.swap_parts(Face::Front, &[7, 8, 3], Face::Left, &[7, 8, 3]);
-        self.swap_parts(Face::Left, &[7, 8, 3], Face::Back, &[7, 8, 3]);
-        self.swap_parts(Face::Back, &[7, 8, 3], Face::Right, &[7, 8, 3]);
-    }
-
-    pub fn s(&mut self) {
-        self.swap_parts(Face::Up, &[7, 8, 3], Face::Left, &[1, 8, 5]);
-        self.swap_parts(Face::Left, &[1, 8, 5], Face::Down, &[3, 8, 7]);
-        self.swap_parts(Face::Down, &[3, 8, 7], Face::Right, &[5, 8, 1]);
-    }
-
-
-    fn swap_parts(&mut self, mut f1: Face, i1: &[usize], mut f2: Face, i2: &[usize]) {
-        let (i1, i2) = if f1 as usize > f2 as usize {
-            swap(&mut f1, &mut f2);
-            (i2, i1)
+    pub fn slice(&mut self, slice: Slice, rev: bool) {
+        let surrounding = slice.surrounding();
+        if rev {
+            for n in (0..3).rev() {
+                self.swap_slice(slice, surrounding[n], surrounding[n + 1]);
+            }
         } else {
-            (i1, i2)
-        };
+            for n in 0..3 {
+                self.swap_slice(slice, surrounding[n], surrounding[n + 1]);
+            }
+        }
+    }
+
+    pub fn rotate(&mut self, rot: Rotate, rev: bool) {
+        match rot {
+            Rotate::X => self.x(rev),
+            Rotate::Y => self.y(rev),
+            Rotate::Z => self.z(rev),
+        }
+    }
+
+    fn x(&mut self, rev: bool) {
+        self.slice(Slice::Middle, !rev);
+        self.face(Face::Right, rev);
+        self.face(Face::Left, !rev);
+    }
+
+    fn y(&mut self, rev: bool) {
+        self.slice(Slice::Equator, !rev);
+        self.face(Face::Up, rev,);
+        self.face(Face::Down, !rev);
+    }
+
+    fn z(&mut self, rev: bool) {
+        self.slice(Slice::Standing, rev);
+        self.face(Face::Front, rev);
+        self.face(Face::Back, !rev);
+    }
+
+    fn swap_pieces<'a>(
+        &mut self,
+        mut f1: Face,
+        mut i1: &'a [usize],
+        mut f2: Face,
+        mut i2: &'a [usize],
+    ) {
+        if f1 as usize > f2 as usize {
+            swap(&mut f1, &mut f2);
+            swap(&mut i1, &mut i2);
+        }
 
         let (l, r) = self.layout.split_at_mut(f2 as usize);
         let (l, r) = (&mut l[f1 as usize], &mut r[0]);
 
         for (&i, &j) in i1.iter().zip(i2) {
-            swap(&mut l[i], &mut r[j]);
+            swap(&mut l[i % 8], &mut r[j % 8]);
         }
     }
 
-    pub fn x(&mut self) {
-        self.m();
-        self.m();
-        self.m();
-        self.rotate(Face::Right);
-        self.rotate(Face::Left);
-        self.rotate(Face::Left);
-        self.rotate(Face::Left);
+    fn swap_slice(&mut self, slice: Slice, f1: Face, f2: Face) {
+        let i1 = slice.intersect(f1);
+        let i2 = slice.intersect(f2);
+        self.swap_pieces(f1, &i1, f2, &i2);
     }
 
-    fn y(&mut self) {
-        let faces = [Face::Front, Face::Left, Face::Back, Face::Right];
-
-        for n in (0..3).map(|n| n as usize) {
-            self.swap_faces(faces[n], faces[n+1]);
-        }
-
-        self.rotate_face(Face::Up);
-
-        self.rotate_face(Face::Down);
-        self.rotate_face(Face::Down);
-        self.rotate_face(Face::Down);
+    fn swap_faces(&mut self, f1: Face, f2: Face) {
+        self.layout.swap(f1 as usize, f2 as usize);
     }
 
-    fn z(&mut self) {
-        let faces = [Face::Up, Face::Left, Face::Down, Face::Right];
-
-        for n in (0..3).map(|n| n as usize) {
-            self.swap_faces(faces[n], faces[n+1]);
-        }
-
-
-        self.rotate_face(Face::Up);
-
-        self.rotate_face(Face::Left);
-        self.rotate_face(Face::Left);
-        self.rotate_face(Face::Left);
-
-        self.rotate_face(Face::Front);
-
-        self.rotate_face(Face::Back);
-        self.rotate_face(Face::Back);
-        self.rotate_face(Face::Back);
+    fn swap_sides(&mut self, fface: Face, f1: Face, f2: Face) {
+        let i1 = fface.intersect(f1) as usize;
+        let i2 = fface.intersect(f2) as usize;
+        self.swap_pieces(f1, &[i1, i1 + 1, i1 + 2], f2, &[i2, i2 + 1, i2 + 2]);
     }
 
-    fn swap_faces(&mut self, mut f1: Face, mut f2: Face) {
-        let l = &mut self.layout;
-        if f1 as usize > f2 as usize {
-            swap(&mut f1, &mut f2);
-        }
-        let (l, r) = l.split_at_mut(f2 as usize);
-        let l = &mut l[f1 as usize];
-        let r = &mut r[0];
-        swap(l, r);
-    }
-
-    fn swap_sides(&mut self, fface: Face, mut lface: Face, mut rface: Face) {
-        if lface as usize > rface as usize {
-            swap(&mut lface, &mut rface);
-        }
-
-        let li = fface.intersect(lface) as usize;
-        let ri = fface.intersect(rface) as usize;
-        let (l, r) = self.layout.split_at_mut(rface as usize);
-        let (l, r) = (&mut l[lface as usize], &mut r[0]);
-
-        for n in 0..3 {
-            swap(&mut l[(li + n) % 8], &mut r[(ri + n) % 8]);
-        }
-    }
-
-    fn rotate_face(&mut self, face: Face) {
+    fn rotate_face(&mut self, face: Face, rev: bool) {
         let face = &mut self.layout[face as usize];
-
-        for n in (0..=4).rev().step_by(2) {
-            face.swap(n, n + 2);
-            face.swap(n + 1, n + 3);
+        if rev {
+            for n in 0..7 {
+                face.swap(n, n + 2);
+            }
+        } else {
+            for n in (0..7).rev() {
+                face.swap(n, n + 2);
+            }
         }
     }
 }
@@ -268,24 +297,39 @@ mod tests {
     fn print() {
         let mut l = Layout::new();
 
+        /*l.rotate(Face::Up, false);
+        l.rotate(Face::Right, false);
+        l.rotate(Face::Up, true);
+        l.rotate(Face::Left, true);
+        l.rotate(Face::Up, false);
+        l.rotate(Face::Right, true);
+        l.rotate(Face::Up, true);
+        l.rotate(Face::Left, false);*/
+
         //l.rotate(Face::Up);
-        /*l.rotate(Face::Up);
-        l.rotate(Face::Down);
-        l.rotate(Face::Down);
-        l.rotate(Face::Left);
-        l.rotate(Face::Left);
-        l.rotate(Face::Right);
-        l.rotate(Face::Right);
-        l.rotate(Face::Front);
-        l.rotate(Face::Front);
-        l.rotate(Face::Back);
-        l.rotate(Face::Back);*/
-        l.s();
-        l.s();
-        l.m();
-        l.m();
-        l.e();
-        l.e();
+        //l.rotate(Face::Down);
+        //l.rotate(Face::Down);
+        //l.rotate(Face::Left);
+        //l.rotate(Face::Left);
+        //l.rotate(Face::Right);
+        //l.rotate(Face::Right);
+        //l.rotate(Face::Front);
+        //l.rotate(Face::Front);
+        //l.rotate(Face::Back);
+        //l.rotate(Face::Back);*/
+        //l.s();
+        //l.s();
+        //l.m();
+        //l.m();
+        //l.e();
+        //l.e();
+        l.slice(Slice::Middle, false);
+        l.slice(Slice::Middle, false);
+        l.slice(Slice::Equator, false);
+        l.slice(Slice::Equator, false);
+        l.slice(Slice::Standing, false);
+        l.slice(Slice::Standing, false);
+        println!("{}", l.solved());
 
         let l = &l.layout;
 
