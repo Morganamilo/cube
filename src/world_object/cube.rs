@@ -1,6 +1,6 @@
 use crate::components::layout;
-use crate::components::layout::Face;
 use crate::components::layout::Layout;
+use crate::components::stickers::{Face, Rotate, Slice, Stickers};
 use crate::components::transform::Transform;
 use crate::ogl::buffer::ModelBuffer;
 use crate::ogl::render::Renderer;
@@ -13,7 +13,23 @@ use sdl2::keyboard::Scancode;
 use sdl2::EventPump;
 use std::rc::Rc;
 
-struct Turn {
+#[derive(Copy, Clone)]
+enum Turn {
+    Up,
+    Down,
+    Left,
+    Right,
+    Front,
+    Back,
+    Middle,
+    Equator,
+    Standing,
+    X,
+    Y,
+    Z,
+}
+
+struct TurnProgress {
     pieces: Vec<usize>,
     rot: Rotation3<f32>,
     steps: usize,
@@ -36,9 +52,10 @@ pub struct Cube {
     buffer: Rc<Vec<ModelBuffer>>,
     texture: Rc<Texture>,
     pieces: [Piece; 27],
-    turn: Option<Turn>,
+    turn: Option<TurnProgress>,
     transform: Transform,
     layout: Layout,
+    stickers: Stickers,
 }
 
 impl WorldObject for Cube {
@@ -58,7 +75,6 @@ impl WorldObject for Cube {
     fn on_tick(&mut self, event_pump: &EventPump, _renderer: &Renderer) {
         self.handle_input(event_pump);
         self.tick_turn();
-        println!("solved {}", self.layout.solved());
     }
 }
 
@@ -151,11 +167,15 @@ impl Cube {
             turn: None,
             transform,
             layout,
+            stickers: Stickers::new(),
         }
     }
 
     fn handle_input(&mut self, event_pump: &EventPump) {
         let kb = &event_pump.keyboard_state();
+        let rev = kb.is_scancode_pressed(Scancode::LShift);
+        let double = kb.is_scancode_pressed(Scancode::LCtrl);
+
         if kb.is_scancode_pressed(Scancode::W) {
             self.transform.translate(Vector3::z() * 0.1);
         }
@@ -217,32 +237,47 @@ impl Cube {
             self.transform.scale -= Vector3::repeat(0.02);
         }
         if kb.is_scancode_pressed(Scancode::Space) {
-            self.transform.look_at(Vector3::zeros());
+            //self.transform.look_at(Vector3::zeros());
         }
         if kb.is_scancode_pressed(Scancode::U) {
             self.transform
                 .look_at(self.transform.pos.coords - Vector3::y());
         }
         if kb.is_scancode_pressed(Scancode::Num1) {
-            self.left();
+            self.turn(Turn::Left, 80, rev, double);
         }
         if kb.is_scancode_pressed(Scancode::Num2) {
-            self.right();
+            self.turn(Turn::Right, 80, rev, double);
         }
         if kb.is_scancode_pressed(Scancode::Num3) {
-            self.up();
+            self.turn(Turn::Up, 80, rev, double);
         }
         if kb.is_scancode_pressed(Scancode::Num4) {
-            self.down();
+            self.turn(Turn::Down, 80, rev, double);
         }
         if kb.is_scancode_pressed(Scancode::Num5) {
-            self.front();
+            self.turn(Turn::Front, 80, rev, double);
         }
         if kb.is_scancode_pressed(Scancode::Num6) {
-            self.back();
+            self.turn(Turn::Back, 80, rev, double);
         }
-        if kb.is_scancode_pressed(Scancode::X) {
-            self.x();
+        if kb.is_scancode_pressed(Scancode::Num7) {
+            self.turn(Turn::X, 80, rev, double);
+        }
+        if kb.is_scancode_pressed(Scancode::Num8) {
+            self.turn(Turn::Y, 80, rev, double);
+        }
+        if kb.is_scancode_pressed(Scancode::Num9) {
+            self.turn(Turn::Z, 80, rev, double);
+        }
+        if kb.is_scancode_pressed(Scancode::I) {
+            self.turn(Turn::Middle, 80, rev, double);
+        }
+        if kb.is_scancode_pressed(Scancode::O) {
+            self.turn(Turn::Equator, 80, rev, double);
+        }
+        if kb.is_scancode_pressed(Scancode::P) {
+            self.turn(Turn::Standing, 80, rev, double);
         }
 
         if kb.is_scancode_pressed(Scancode::V) {
@@ -250,14 +285,10 @@ impl Cube {
                 piece.transform.translate(Vector3::z() * 0.1);
             }
         }
-        if kb.is_scancode_pressed(Scancode::M) {
-            self.middle();
-        }
 
         if kb.is_scancode_pressed(Scancode::Z) {
-            self.pieces[0].transform.translate(Vector3::y() * 0.01);
+            self.pieces[0].transform.translate(Vector3::y() * 0.1);
         }
-
     }
 
     fn tick_turn(&mut self) {
@@ -278,63 +309,124 @@ impl Cube {
         }
     }
 
-    fn turn(&mut self, dir: Vector3<f32>, faces: &[&Face], speed: usize) {
+    fn turn_inner(&mut self, turn: Turn, rev: bool) -> (Vector3<f32>, Vec<layout::Face>) {
+        let dir;
+        let faces;
+
+        match turn {
+            Turn::Up => {
+                self.stickers.face(Face::Up, rev);
+                dir = Vector3::z();
+                faces = vec![layout::UP.reverse(rev)];
+            }
+            Turn::Down => {
+                self.stickers.face(Face::Down, rev);
+                dir = -Vector3::z();
+                faces = vec![layout::DOWN.reverse(rev)];
+            }
+            Turn::Left => {
+                self.stickers.face(Face::Left, rev);
+                dir = Vector3::x();
+                faces = vec![layout::LEFT.reverse(rev)];
+            }
+            Turn::Right => {
+                self.stickers.face(Face::Right, rev);
+                dir = -Vector3::x();
+                faces = vec![layout::RIGHT.reverse(rev)];
+            }
+            Turn::Front => {
+                self.stickers.face(Face::Front, rev);
+                dir = -Vector3::y();
+                faces = vec![layout::FRONT.reverse(rev)];
+            }
+            Turn::Back => {
+                self.stickers.face(Face::Back, rev);
+                dir = Vector3::y();
+                faces = vec![layout::BACK.reverse(rev)];
+            }
+            Turn::X => {
+                self.stickers.rotate(Rotate::X, rev);
+                dir = -Vector3::x();
+                faces = vec![
+                    layout::MIDDLE.reverse(!rev),
+                    layout::LEFT.reverse(!rev),
+                    layout::RIGHT.reverse(rev),
+                ];
+            }
+            Turn::Y => {
+                self.stickers.rotate(Rotate::Y, rev);
+                dir = Vector3::z();
+                faces = vec![
+                    layout::EQUATOR.reverse(!rev),
+                    layout::UP.reverse(rev),
+                    layout::DOWN.reverse(!rev),
+                ];
+            }
+            Turn::Z => {
+                self.stickers.rotate(Rotate::Z, rev);
+                dir = -Vector3::y();
+                faces = vec![
+                    layout::STANDING.reverse(rev),
+                    layout::BACK.reverse(!rev),
+                    layout::FRONT.reverse(rev),
+                ];
+            }
+            Turn::Middle => {
+                self.stickers.slice(Slice::Middle, rev);
+                dir = Vector3::x();
+                faces = vec![layout::MIDDLE.reverse(rev)];
+            }
+            Turn::Equator => {
+                self.stickers.slice(Slice::Equator, rev);
+                dir = -Vector3::z();
+                faces = vec![layout::EQUATOR.reverse(rev)];
+            }
+            Turn::Standing => {
+                self.stickers.slice(Slice::Standing, rev);
+                dir = -Vector3::y();
+                faces = vec![layout::STANDING.reverse(rev)];
+            }
+        }
+
+        (dir, faces)
+    }
+
+    fn turn(&mut self, turn: Turn, speed: usize, rev: bool, double: bool) {
         assert!(speed <= 100);
         if self.turn.is_some() {
             return;
         }
 
         let mut pieces = Vec::new();
+        let (mut dir, faces) = self.turn_inner(turn, rev);
+
+        if double {
+            self.turn_inner(turn, rev);
+        }
+
+        if rev {
+            dir *= -1.0;
+        }
+
         for face in faces.iter() {
             self.layout.turn(face);
+            if double {
+                self.layout.turn(face);
+            }
             pieces.extend(&self.layout.layer(face));
         }
 
-        let steps = 101 - speed;
+        let mut steps = 101 - speed;
         let dir = dir * f32::to_radians(90.0) / steps as f32;
         let rot = Rotation3::from_euler_angles(dir.x, dir.y, dir.z);
-        let turn = Turn { pieces, rot, steps };
+        if double {
+            steps *= 2
+        };
+        let turn = TurnProgress { pieces, rot, steps };
 
         self.turn = Some(turn);
-    }
 
-    pub fn front(&mut self) {
-        self.turn(-Vector3::y(), &[&layout::FRONT], 80);
-    }
-
-    pub fn back(&mut self) {
-        self.turn(Vector3::y(), &[&layout::BACK], 80);
-    }
-
-    pub fn up(&mut self) {
-        self.turn(Vector3::z(), &[&layout::UP], 80);
-    }
-
-    pub fn down(&mut self) {
-        self.turn(-Vector3::z(), &[&layout::DOWN], 80);
-    }
-
-    pub fn left(&mut self) {
-        self.turn(Vector3::x(), &[&layout::LEFT], 80);
-    }
-
-    pub fn right(&mut self) {
-        self.turn(-Vector3::x(), &[&layout::RIGHT], 80);
-    }
-
-    pub fn middle(&mut self) {
-        self.turn(Vector3::x(), &[&layout::MIDDLE], 80);
-    }
-
-    pub fn x(&mut self) {
-        self.turn(
-            -Vector3::x(),
-            &[
-                &layout::MIDDLE.reverse(),
-                &layout::LEFT.reverse(),
-                &layout::RIGHT,
-            ],
-            80,
-        );
+        println!("{:?}", self.stickers);
+        println!("solved {}", self.stickers.solved());
     }
 }

@@ -145,6 +145,54 @@ pub struct Stickers {
     stickers: [[Sticker; 9]; 6],
 }
 
+impl fmt::Debug for Stickers {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let l = &self.stickers;
+
+        const P0: usize = 0;
+        const P1: usize = 1;
+        const P2: usize = 2;
+        const P3: usize = 7;
+        const P4: usize = 8;
+        const P5: usize = 3;
+        const P6: usize = 6;
+        const P7: usize = 5;
+        const P8: usize = 4;
+        static PINDEX: [usize; 9] = [P0, P1, P2, P3, P4, P5, P6, P7, P8];
+
+        for y in 0..3 {
+            f.write_str("        ")?;
+            for x in 0..3 {
+                write!(f, "{:?} ", l[Face::Up as usize][PINDEX[x + (3 * y)]])?;
+            }
+            f.write_str("  \n")?;
+        }
+
+        f.write_str("\n")?;
+
+        for y in 0..3 {
+            for &face in &[Face::Left, Face::Front, Face::Right, Face::Back] {
+                for x in 0..3 {
+                    write!(f, "{:?} ", l[face as usize][PINDEX[x + (3 * y)]])?;
+                }
+                f.write_str("  ")?;
+            }
+            f.write_str("\n")?;
+        }
+
+        f.write_str("\n")?;
+
+        for y in 0..3 {
+            f.write_str("        ")?;
+            for x in 0..3 {
+                write!(f, "{:?} ", l[Face::Down as usize][PINDEX[x + (3 * y)]])?;
+            }
+            f.write_str("  \n")?;
+        }
+        Ok(())
+    }
+}
+
 impl Stickers {
     pub const fn new() -> Self {
         Stickers {
@@ -237,7 +285,7 @@ impl Stickers {
         let (l, r) = (&mut l[f1 as usize], &mut r[0]);
 
         for (&i, &j) in i1.iter().zip(i2) {
-            swap(&mut l[i % 8], &mut r[j % 8]);
+            swap(&mut l[i], &mut r[j]);
         }
     }
 
@@ -254,7 +302,7 @@ impl Stickers {
     fn swap_sides(&mut self, fface: Face, f1: Face, f2: Face) {
         let i1 = fface.intersect(f1) as usize;
         let i2 = fface.intersect(f2) as usize;
-        self.swap_pieces(f1, &[i1, i1 + 1, i1 + 2], f2, &[i2, i2 + 1, i2 + 2]);
+        self.swap_pieces(f1, &[i1, (i1 + 1) % 8, (i1 + 2) % 8], f2, &[i2, (i2 + 1) % 8, (i2 + 2) % 8]);
     }
 
     fn rotate_face(&mut self, face: Face, rev: bool) {
@@ -274,24 +322,6 @@ impl Stickers {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const UP: usize = 0;
-    const DOWN: usize = 1;
-    const LEFT: usize = 2;
-    const RIGHT: usize = 3;
-    const FRONT: usize = 4;
-    const BACK: usize = 5;
-
-    const P0: usize = 0;
-    const P1: usize = 1;
-    const P2: usize = 2;
-    const P3: usize = 7;
-    const P4: usize = 8;
-    const P5: usize = 3;
-    const P6: usize = 6;
-    const P7: usize = 5;
-    const P8: usize = 4;
-    static PINDEX: [usize; 9] = [P0, P1, P2, P3, P4, P5, P6, P7, P8];
 
     #[test]
     fn print() {
@@ -330,45 +360,8 @@ mod tests {
         l.slice(Slice::Standing, false);
         l.slice(Slice::Standing, false);
         println!("{}", l.solved());
+        println!("{:?}", l);
 
-        let l = &l.stickers;
 
-        for y in 0..3 {
-            print!("        ");
-            for x in 0..3 {
-                print!("{:?} ", l[UP][PINDEX[x + (3 * y)]]);
-            }
-            println!();
-        }
-        println!();
-
-        for y in 0..3 {
-            for x in 0..3 {
-                print!("{:?} ", l[LEFT][PINDEX[x + (3 * y)]]);
-            }
-            print!("  ");
-            for x in 0..3 {
-                print!("{:?} ", l[FRONT][PINDEX[x + (3 * y)]]);
-            }
-            print!("  ");
-            for x in 0..3 {
-                print!("{:?} ", l[RIGHT][PINDEX[x + (3 * y)]]);
-            }
-            print!("  ");
-            for x in 0..3 {
-                print!("{:?} ", l[BACK][PINDEX[x + (3 * y)]]);
-            }
-            println!();
-        }
-
-        println!();
-
-        for y in 0..3 {
-            print!("        ");
-            for x in 0..3 {
-                print!("{:?} ", l[DOWN][PINDEX[x + (3 * y)]]);
-            }
-            println!();
-        }
     }
 }

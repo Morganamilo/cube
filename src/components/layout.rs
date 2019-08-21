@@ -75,6 +75,19 @@ pub static MIDDLE: Face = Face {
     center: C,
 };
 
+pub static EQUATOR: Face = Face {
+    corners: [FR, FL, BL, BR],
+    edges: [F, L, B, R],
+    center: C,
+};
+
+pub static STANDING: Face = Face {
+    corners: [RU, LU, LD, RD],
+    edges: [U, L, D, R],
+    center: C,
+};
+
+#[derive(Copy, Clone)]
 pub struct Face {
     corners: [usize; 4],
     edges: [usize; 4],
@@ -88,14 +101,18 @@ impl Face {
         [c[0], c[1], c[2], c[3], e[0], e[1], e[2], e[3], self.center]
     }
 
-    pub fn reverse(&self) -> Self {
-        let c = &self.corners;
-        let e = &self.edges;
+    pub fn reverse(&self, rev: bool) -> Self {
+        if !rev {
+            *self
+        } else {
+            let c = &self.corners;
+            let e = &self.edges;
 
-        Face {
-            corners: [c[0], c[3], c[2], c[1]],
-            edges: [e[0], e[3], e[2], e[1]],
-            center: self.center,
+            Face {
+                corners: [c[0], c[3], c[2], c[1]],
+                edges: [e[0], e[3], e[2], e[1]],
+                center: self.center,
+            }
         }
     }
 }
@@ -131,9 +148,5 @@ impl Layout {
             out[i] = l[f[i]];
         }
         out
-    }
-
-    pub fn solved(&self) -> bool {
-        self.layout == LAYOUT
     }
 }
