@@ -302,7 +302,12 @@ impl Stickers {
     fn swap_sides(&mut self, fface: Face, f1: Face, f2: Face) {
         let i1 = fface.intersect(f1) as usize;
         let i2 = fface.intersect(f2) as usize;
-        self.swap_pieces(f1, &[i1, (i1 + 1) % 8, (i1 + 2) % 8], f2, &[i2, (i2 + 1) % 8, (i2 + 2) % 8]);
+        self.swap_pieces(
+            f1,
+            &[i1, (i1 + 1) % 8, (i1 + 2) % 8],
+            f2,
+            &[i2, (i2 + 1) % 8, (i2 + 2) % 8],
+        );
     }
 
     fn rotate_face(&mut self, face: Face, rev: bool) {
@@ -361,7 +366,5 @@ mod tests {
         l.slice(Slice::Standing, false);
         println!("{}", l.solved());
         println!("{:?}", l);
-
-
     }
 }

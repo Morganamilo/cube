@@ -13,6 +13,13 @@ use sdl2::keyboard::Scancode;
 use sdl2::EventPump;
 use std::rc::Rc;
 
+struct Move {
+    turn: Turn,
+    rev: bool,
+    double: bool,
+    with: bool,
+}
+
 #[derive(Copy, Clone)]
 enum Turn {
     Up,
@@ -27,6 +34,19 @@ enum Turn {
     X,
     Y,
     Z,
+}
+
+impl Turn {
+    fn axis(self) -> Vector3<f32> {
+        match self {
+            Turn::Up | Turn::Y => Vector3::z(),
+            Turn::Down | Turn::Equator => -Vector3::z(),
+            Turn::Left | Turn::Middle => Vector3::x(),
+            Turn::Right | Turn::X => -Vector3::x(),
+            Turn::Front | Turn::Z | Turn::Standing => -Vector3::y(),
+            Turn::Back => Vector3::y(),
+        }
+    }
 }
 
 struct TurnProgress {
@@ -87,37 +107,6 @@ impl Cube {
         use crate::components::piece::*;
         let _pieces = [Piece::new(&[]); 27];
         let pieces = [
-            /*//white layer
-            Piece::new(&BOW),
-            Piece::new(&BW),
-            Piece::new(&BRW),
-            Piece::new(&OW),
-            Piece::new(&W),
-            Piece::new(&RW),
-            Piece::new(&GOW),
-            Piece::new(&GW),
-            Piece::new(&GRW),
-            //middle
-            Piece::new(&BO),
-            Piece::new(&B),
-            Piece::new(&BR),
-            Piece::new(&O),
-            Piece::new(&C),
-            Piece::new(&R),
-            Piece::new(&GO),
-            Piece::new(&G),
-            Piece::new(&GR),
-            //yelow layer
-            Piece::new(&BOY),
-            Piece::new(&BY),
-            Piece::new(&BRY),
-            Piece::new(&OY),
-            Piece::new(&Y),
-            Piece::new(&RY),
-            Piece::new(&GOY),
-            Piece::new(&GY),
-            Piece::new(&GRY),*/
-
             // blue layer
             Piece::new(&BOY),
             Piece::new(&BY),
@@ -128,7 +117,6 @@ impl Cube {
             Piece::new(&BOW),
             Piece::new(&BW),
             Piece::new(&BRW),
-
             // middle layer
             Piece::new(&OY),
             Piece::new(&Y),
@@ -139,7 +127,6 @@ impl Cube {
             Piece::new(&OW),
             Piece::new(&W),
             Piece::new(&RW),
-
             // green layer
             Piece::new(&GOY),
             Piece::new(&GY),
@@ -175,6 +162,7 @@ impl Cube {
         let kb = &event_pump.keyboard_state();
         let rev = kb.is_scancode_pressed(Scancode::LShift);
         let double = kb.is_scancode_pressed(Scancode::LCtrl);
+        let with = kb.is_scancode_pressed(Scancode::LAlt);
 
         if kb.is_scancode_pressed(Scancode::W) {
             self.transform.translate(Vector3::z() * 0.1);
@@ -244,40 +232,40 @@ impl Cube {
                 .look_at(self.transform.pos.coords - Vector3::y());
         }
         if kb.is_scancode_pressed(Scancode::Num1) {
-            self.turn(Turn::Left, 80, rev, double);
+            self.turn(Turn::Left, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::Num2) {
-            self.turn(Turn::Right, 80, rev, double);
+            self.turn(Turn::Right, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::Num3) {
-            self.turn(Turn::Up, 80, rev, double);
+            self.turn(Turn::Up, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::Num4) {
-            self.turn(Turn::Down, 80, rev, double);
+            self.turn(Turn::Down, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::Num5) {
-            self.turn(Turn::Front, 80, rev, double);
+            self.turn(Turn::Front, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::Num6) {
-            self.turn(Turn::Back, 80, rev, double);
+            self.turn(Turn::Back, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::Num7) {
-            self.turn(Turn::X, 80, rev, double);
+            self.turn(Turn::X, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::Num8) {
-            self.turn(Turn::Y, 80, rev, double);
+            self.turn(Turn::Y, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::Num9) {
-            self.turn(Turn::Z, 80, rev, double);
+            self.turn(Turn::Z, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::I) {
-            self.turn(Turn::Middle, 80, rev, double);
+            self.turn(Turn::Middle, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::O) {
-            self.turn(Turn::Equator, 80, rev, double);
+            self.turn(Turn::Equator, 80, rev, double, with);
         }
         if kb.is_scancode_pressed(Scancode::P) {
-            self.turn(Turn::Standing, 80, rev, double);
+            self.turn(Turn::Standing, 80, rev, double, with);
         }
 
         if kb.is_scancode_pressed(Scancode::V) {
@@ -309,44 +297,37 @@ impl Cube {
         }
     }
 
-    fn turn_inner(&mut self, turn: Turn, rev: bool) -> (Vector3<f32>, Vec<layout::Face>) {
-        let dir;
-        let faces;
+    fn turn_inner(&mut self, turn: Turn, rev: bool, with: bool) -> (Vector3<f32>, Vec<layout::Face>) {
+        let dir = turn.axis();
+        let mut faces;
 
         match turn {
             Turn::Up => {
                 self.stickers.face(Face::Up, rev);
-                dir = Vector3::z();
                 faces = vec![layout::UP.reverse(rev)];
             }
             Turn::Down => {
                 self.stickers.face(Face::Down, rev);
-                dir = -Vector3::z();
                 faces = vec![layout::DOWN.reverse(rev)];
             }
             Turn::Left => {
                 self.stickers.face(Face::Left, rev);
-                dir = Vector3::x();
                 faces = vec![layout::LEFT.reverse(rev)];
             }
             Turn::Right => {
                 self.stickers.face(Face::Right, rev);
-                dir = -Vector3::x();
                 faces = vec![layout::RIGHT.reverse(rev)];
             }
             Turn::Front => {
                 self.stickers.face(Face::Front, rev);
-                dir = -Vector3::y();
                 faces = vec![layout::FRONT.reverse(rev)];
             }
             Turn::Back => {
                 self.stickers.face(Face::Back, rev);
-                dir = Vector3::y();
                 faces = vec![layout::BACK.reverse(rev)];
             }
             Turn::X => {
                 self.stickers.rotate(Rotate::X, rev);
-                dir = -Vector3::x();
                 faces = vec![
                     layout::MIDDLE.reverse(!rev),
                     layout::LEFT.reverse(!rev),
@@ -355,7 +336,6 @@ impl Cube {
             }
             Turn::Y => {
                 self.stickers.rotate(Rotate::Y, rev);
-                dir = Vector3::z();
                 faces = vec![
                     layout::EQUATOR.reverse(!rev),
                     layout::UP.reverse(rev),
@@ -364,7 +344,6 @@ impl Cube {
             }
             Turn::Z => {
                 self.stickers.rotate(Rotate::Z, rev);
-                dir = -Vector3::y();
                 faces = vec![
                     layout::STANDING.reverse(rev),
                     layout::BACK.reverse(!rev),
@@ -373,35 +352,62 @@ impl Cube {
             }
             Turn::Middle => {
                 self.stickers.slice(Slice::Middle, rev);
-                dir = Vector3::x();
                 faces = vec![layout::MIDDLE.reverse(rev)];
             }
             Turn::Equator => {
                 self.stickers.slice(Slice::Equator, rev);
-                dir = -Vector3::z();
                 faces = vec![layout::EQUATOR.reverse(rev)];
             }
             Turn::Standing => {
                 self.stickers.slice(Slice::Standing, rev);
-                dir = -Vector3::y();
                 faces = vec![layout::STANDING.reverse(rev)];
+            }
+        }
+
+        if with {
+            match turn {
+                Turn::Up => {
+                    self.stickers.slice(Slice::Equator, !rev);
+                    faces.push(layout::EQUATOR.reverse(!rev));
+                }
+                Turn::Down => {
+                    self.stickers.slice(Slice::Equator, rev);
+                    faces.push(layout::EQUATOR.reverse(rev));
+                }
+                Turn::Left => {
+                    self.stickers.slice(Slice::Middle, rev);
+                    faces.push(layout::MIDDLE.reverse(rev));
+                }
+                Turn::Right => {
+                    self.stickers.slice(Slice::Middle, !rev);
+                    faces.push(layout::MIDDLE.reverse(!rev));
+                }
+                Turn::Front => {
+                    self.stickers.slice(Slice::Standing, rev);
+                    faces.push(layout::STANDING.reverse(rev));
+                }
+                Turn::Back => {
+                    self.stickers.slice(Slice::Standing, !rev);
+                    faces.push(layout::STANDING.reverse(!rev));
+                }
+                _ => (),
             }
         }
 
         (dir, faces)
     }
 
-    fn turn(&mut self, turn: Turn, speed: usize, rev: bool, double: bool) {
+    fn turn(&mut self, turn: Turn, speed: usize, rev: bool, double: bool, with: bool) {
         assert!(speed <= 100);
         if self.turn.is_some() {
             return;
         }
 
         let mut pieces = Vec::new();
-        let (mut dir, faces) = self.turn_inner(turn, rev);
+        let (mut dir, faces) = self.turn_inner(turn, rev, with);
 
         if double {
-            self.turn_inner(turn, rev);
+            self.turn_inner(turn, rev, with);
         }
 
         if rev {
